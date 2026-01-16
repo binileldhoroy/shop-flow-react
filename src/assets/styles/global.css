@@ -125,6 +125,14 @@ body {
   background-color: rgb(14 116 144);
 }
 
+.bg-green-500 {
+  background-color: rgb(34 197 94);
+}
+
+.bg-cyan-500 {
+  background-color: rgb(6 182 212);
+}
+
 .btn-warning {
   background-color: rgb(245 158 11);
   color: white;
