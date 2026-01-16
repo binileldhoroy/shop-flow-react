@@ -24,6 +24,12 @@ export const customerService = {
     return response.data;
   },
 
+  // Search customers by query
+  search: async (query: string, pageSize: number = 20): Promise<any> => {
+    const response = await axiosInstance.get(`${API_ENDPOINTS.CUSTOMERS.LIST}?search=${encodeURIComponent(query)}&page_size=${pageSize}`);
+    return response.data;
+  },
+
   // Get customer by ID
   getById: async (id: number): Promise<any> => {
     const response = await axiosInstance.get(API_ENDPOINTS.CUSTOMERS.DETAIL(id));

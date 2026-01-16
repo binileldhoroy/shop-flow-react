@@ -26,10 +26,18 @@ export interface PaginatedResponse<T> {
 }
 
 export const saleService = {
-  // Get sales with server-side pagination
+  // Get all sales with pagination
   getAll: async (page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<any>> => {
-    const response = await axiosInstance.get(
+    const response = await axiosInstance.get<PaginatedResponse<any>>(
       `${API_ENDPOINTS.SALES.LIST}?page=${page}&page_size=${pageSize}`
+    );
+    return response.data;
+  },
+
+  // Search sales by query with pagination
+  search: async (query: string, page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<any>> => {
+    const response = await axiosInstance.get<PaginatedResponse<any>>(
+      `${API_ENDPOINTS.SALES.LIST}?search=${encodeURIComponent(query)}&page=${page}&page_size=${pageSize}`
     );
     return response.data;
   },

@@ -6,10 +6,18 @@ import {
   InvoiceFilters,
 } from '../../types/invoice.types';
 
+// Paginated response type
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export const invoiceService = {
   // Get all invoices with optional filters
-  getInvoices: async (filters?: InvoiceFilters): Promise<TaxInvoice[]> => {
-    const response = await axiosInstance.get<TaxInvoice[]>(
+  getInvoices: async (filters?: InvoiceFilters): Promise<PaginatedResponse<TaxInvoice>> => {
+    const response = await axiosInstance.get<PaginatedResponse<TaxInvoice>>(
       API_ENDPOINTS.SALES.INVOICES,
       { params: filters }
     );

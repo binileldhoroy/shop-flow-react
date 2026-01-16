@@ -29,7 +29,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
   if (!currentCompany) {
     return (
       <div className="p-5 text-center">
-        <p className="text-muted">Please configure company settings first</p>
+        <p className="text-gray-500">Please configure company settings first</p>
       </div>
     );
   }
@@ -43,16 +43,8 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
     const teens = [
-      'Ten',
-      'Eleven',
-      'Twelve',
-      'Thirteen',
-      'Fourteen',
-      'Fifteen',
-      'Sixteen',
-      'Seventeen',
-      'Eighteen',
-      'Nineteen',
+      'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen',
+      'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen',
     ];
 
     if (num === 0) return 'Zero';
@@ -118,25 +110,29 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
 
   return (
     <div
-      className="bg-white p-4"
       style={{
         maxWidth: '210mm',
         margin: '0 auto',
+        padding: '16px',
         fontFamily: 'Arial, sans-serif',
         fontSize: '14px',
+        backgroundColor: 'white',
       }}
     >
       {/* Main Border */}
       <div style={{ border: '2px solid black' }}>
         {/* Company Header */}
         <div
-          className="text-center p-3"
-          style={{ borderBottom: '2px solid black' }}
+          style={{
+            textAlign: 'center',
+            padding: '12px',
+            borderBottom: '2px solid black',
+          }}
         >
-          <h1 className="fw-bold mb-1" style={{ fontSize: '24px' }}>
+          <h1 style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: '24px', margin: 0 }}>
             {currentCompany.company_name}
           </h1>
-          <p className="mb-0" style={{ fontSize: '13px' }}>
+          <p style={{ marginBottom: 0, fontSize: '13px', lineHeight: '1.5' }}>
             {currentCompany.address_line1}
             {currentCompany.address_line2 && `, ${currentCompany.address_line2}`}
             <br />
@@ -145,83 +141,87 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             Phone: {currentCompany.phone} | Email: {currentCompany.email}
             {currentCompany.website && <> | {currentCompany.website}</>}
           </p>
-          <p className="fw-semibold mt-1 mb-0" style={{ fontSize: '13px' }}>
+          <p style={{ fontWeight: '600', marginTop: '4px', marginBottom: 0, fontSize: '13px' }}>
             GSTIN: {currentCompany.gstin}
           </p>
         </div>
 
         {/* Tax Invoice Title */}
         <div
-          className="text-center p-2 bg-light"
-          style={{ borderBottom: '2px solid black' }}
+          style={{
+            textAlign: 'center',
+            padding: '8px',
+            backgroundColor: '#f8f9fa',
+            borderBottom: '2px solid black',
+          }}
         >
-          <h2 className="fw-bold mb-0" style={{ fontSize: '20px' }}>
+          <h2 style={{ fontWeight: 'bold', marginBottom: 0, fontSize: '20px', margin: 0 }}>
             TAX INVOICE
           </h2>
         </div>
 
         {/* Invoice Details & Customer Details */}
-        <div className="row g-0" style={{ borderBottom: '2px solid black' }}>
+        <div style={{ display: 'flex', borderBottom: '2px solid black' }}>
           {/* Left: Customer Details */}
-          <div className="col-6 p-3" style={{ borderRight: '2px solid black' }}>
-            <p className="fw-semibold mb-2">Bill To:</p>
-            <p className="fw-bold mb-1">
+          <div style={{ flex: 1, padding: '12px', borderRight: '2px solid black' }}>
+            <p style={{ fontWeight: '600', marginBottom: '8px' }}>Bill To:</p>
+            <p style={{ fontWeight: 'bold', marginBottom: '4px' }}>
               {customerDetails?.name || saleOrder.customer_name || 'Walk-in Customer'}
             </p>
             {customerDetails?.gstin && (
-              <p className="mb-1" style={{ fontSize: '13px' }}>
-                <span className="fw-semibold">GSTIN:</span> {customerDetails.gstin}
+              <p style={{ marginBottom: '4px', fontSize: '13px' }}>
+                <span style={{ fontWeight: '600' }}>GSTIN:</span> {customerDetails.gstin}
               </p>
             )}
             {customerDetails?.address && (
-              <p className="mb-1" style={{ fontSize: '13px' }}>
+              <p style={{ marginBottom: '4px', fontSize: '13px' }}>
                 {customerDetails.address}
               </p>
             )}
             {(customerDetails?.city || customerDetails?.state || customerDetails?.pincode) && (
-              <p className="mb-1" style={{ fontSize: '13px' }}>
+              <p style={{ marginBottom: '4px', fontSize: '13px' }}>
                 {[customerDetails?.city, customerDetails?.state, customerDetails?.pincode]
                   .filter(Boolean)
                   .join(', ')}
               </p>
             )}
             {customerDetails?.phone && (
-              <p className="mb-1" style={{ fontSize: '13px' }}>
-                <span className="fw-semibold">Phone:</span> {customerDetails.phone}
+              <p style={{ marginBottom: '4px', fontSize: '13px' }}>
+                <span style={{ fontWeight: '600' }}>Phone:</span> {customerDetails.phone}
               </p>
             )}
             {customerDetails?.email && (
-              <p className="mb-1" style={{ fontSize: '13px' }}>
-                <span className="fw-semibold">Email:</span> {customerDetails.email}
+              <p style={{ marginBottom: '4px', fontSize: '13px' }}>
+                <span style={{ fontWeight: '600' }}>Email:</span> {customerDetails.email}
               </p>
             )}
-            <p className="mb-0 mt-2" style={{ fontSize: '13px' }}>
-              <span className="fw-semibold">Place of Supply:</span>{' '}
+            <p style={{ marginBottom: 0, marginTop: '8px', fontSize: '13px' }}>
+              <span style={{ fontWeight: '600' }}>Place of Supply:</span>{' '}
               {customerDetails?.state || saleOrder.place_of_supply || currentCompany.state_name || ''}
             </p>
           </div>
 
           {/* Right: Invoice Details */}
-          <div className="col-6 p-3">
-            <table className="w-100" style={{ fontSize: '13px' }}>
+          <div style={{ flex: 1, padding: '12px' }}>
+            <table style={{ width: '100%', fontSize: '13px' }}>
               <tbody>
                 <tr>
-                  <td className="fw-semibold py-1">Invoice No:</td>
-                  <td className="text-end">{invoiceNumber || 'DRAFT'}</td>
+                  <td style={{ fontWeight: '600', paddingTop: '4px', paddingBottom: '4px' }}>Invoice No:</td>
+                  <td style={{ textAlign: 'right' }}>{invoiceNumber || 'PREVIEW'}</td>
                 </tr>
                 <tr>
-                  <td className="fw-semibold py-1">Invoice Date:</td>
-                  <td className="text-end">
+                  <td style={{ fontWeight: '600', paddingTop: '4px', paddingBottom: '4px' }}>Invoice Date:</td>
+                  <td style={{ textAlign: 'right' }}>
                     {invoiceDate ? formatDate(invoiceDate) : formatDate(new Date().toISOString())}
                   </td>
                 </tr>
                 <tr>
-                  <td className="fw-semibold py-1">Order No:</td>
-                  <td className="text-end">{saleOrder.order_number}</td>
+                  <td style={{ fontWeight: '600', paddingTop: '4px', paddingBottom: '4px' }}>Order No:</td>
+                  <td style={{ textAlign: 'right' }}>{saleOrder.order_number}</td>
                 </tr>
                 <tr>
-                  <td className="fw-semibold py-1">Order Date:</td>
-                  <td className="text-end">{formatDate(saleOrder.sale_date)}</td>
+                  <td style={{ fontWeight: '600', paddingTop: '4px', paddingBottom: '4px' }}>Order Date:</td>
+                  <td style={{ textAlign: 'right' }}>{formatDate(saleOrder.sale_date)}</td>
                 </tr>
               </tbody>
             </table>
@@ -229,34 +229,25 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         </div>
 
         {/* Items Table */}
-        <table className="w-100" style={{ fontSize: '13px' }}>
+        <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid black', backgroundColor: '#f8f9fa' }}>
-              <th className="p-2 text-start" style={{ width: '50px', borderRight: '1px solid black' }}>
+              <th style={{ padding: '8px', textAlign: 'left', width: '50px', borderRight: '1px solid black' }}>
                 S.No
               </th>
-              <th className="p-2 text-start" style={{ borderRight: '1px solid black' }}>
+              <th style={{ padding: '8px', textAlign: 'left', borderRight: '1px solid black' }}>
                 Description of Goods
               </th>
-              <th
-                className="p-2 text-center"
-                style={{ width: '100px', borderRight: '1px solid black' }}
-              >
+              <th style={{ padding: '8px', textAlign: 'center', width: '100px', borderRight: '1px solid black' }}>
                 HSN/SAC
               </th>
-              <th
-                className="p-2 text-center"
-                style={{ width: '60px', borderRight: '1px solid black' }}
-              >
+              <th style={{ padding: '8px', textAlign: 'center', width: '60px', borderRight: '1px solid black' }}>
                 Qty
               </th>
-              <th
-                className="p-2 text-end"
-                style={{ width: '100px', borderRight: '1px solid black' }}
-              >
+              <th style={{ padding: '8px', textAlign: 'right', width: '100px', borderRight: '1px solid black' }}>
                 Rate
               </th>
-              <th className="p-2 text-end" style={{ width: '120px', borderRight: '1px solid black' }}>
+              <th style={{ padding: '8px', textAlign: 'right', width: '120px' }}>
                 Amount
               </th>
             </tr>
@@ -264,22 +255,22 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
           <tbody>
             {saleOrder.items?.map((item, index) => (
               <tr key={item.id} style={{ borderBottom: '1px solid black' }}>
-                <td className="p-2 text-center" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid black' }}>
                   {index + 1}
                 </td>
-                <td className="p-2" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', borderRight: '1px solid black' }}>
                   {item.product_name}
                 </td>
-                <td className="p-2 text-center" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid black' }}>
                   {item.hsn_code || '-'}
                 </td>
-                <td className="p-2 text-center" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid black' }}>
                   {item.quantity}
                 </td>
-                <td className="p-2 text-end" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                   ₹{Number(item.unit_price).toFixed(2)}
                 </td>
-                <td className="p-2 text-end" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', textAlign: 'right' }}>
                   ₹{Number(item.line_total).toFixed(2)}
                 </td>
               </tr>
@@ -289,24 +280,12 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             {saleOrder.items && saleOrder.items.length < 5 &&
               Array.from({ length: 5 - saleOrder.items.length }).map((_, i) => (
                 <tr key={`spacer-${i}`} style={{ borderBottom: '1px solid black' }}>
-                  <td className="p-2" style={{ borderRight: '1px solid black' }}>
-                    &nbsp;
-                  </td>
-                  <td className="p-2" style={{ borderRight: '1px solid black' }}>
-                    &nbsp;
-                  </td>
-                  <td className="p-2" style={{ borderRight: '1px solid black' }}>
-                    &nbsp;
-                  </td>
-                  <td className="p-2" style={{ borderRight: '1px solid black' }}>
-                    &nbsp;
-                  </td>
-                  <td className="p-2" style={{ borderRight: '1px solid black' }}>
-                    &nbsp;
-                  </td>
-                  <td className="p-2" style={{ borderRight: '1px solid black' }}>
-                    &nbsp;
-                  </td>
+                  <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
+                  <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
+                  <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
+                  <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
+                  <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
+                  <td style={{ padding: '8px' }}>&nbsp;</td>
                 </tr>
               ))}
 
@@ -314,15 +293,11 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             <tr style={{ borderBottom: '1px solid black' }}>
               <td
                 colSpan={5}
-                className="p-2 text-end fw-semibold"
-                style={{ borderRight: '1px solid black' }}
+                style={{ padding: '8px', textAlign: 'right', fontWeight: '600', borderRight: '1px solid black' }}
               >
                 Subtotal:
               </td>
-              <td
-                className="p-2 text-end fw-semibold"
-                style={{ borderRight: '1px solid black' }}
-              >
+              <td style={{ padding: '8px', textAlign: 'right', fontWeight: '600' }}>
                 ₹{Number(saleOrder.subtotal).toFixed(2)}
               </td>
             </tr>
@@ -330,40 +305,28 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             {/* GST Breakdown */}
             {saleOrder.igst_amount > 0 ? (
               <tr style={{ borderBottom: '1px solid black' }}>
-                <td
-                  colSpan={5}
-                  className="p-2 text-end"
-                  style={{ borderRight: '1px solid black' }}
-                >
+                <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                   IGST @ {igstPercent}%:
                 </td>
-                <td className="p-2 text-end" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', textAlign: 'right' }}>
                   ₹{Number(saleOrder.igst_amount).toFixed(2)}
                 </td>
               </tr>
             ) : (
               <>
                 <tr style={{ borderBottom: '1px solid black' }}>
-                  <td
-                    colSpan={5}
-                    className="p-2 text-end"
-                    style={{ borderRight: '1px solid black' }}
-                  >
+                  <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                     CGST @ {cgstPercent}%:
                   </td>
-                  <td className="p-2 text-end" style={{ borderRight: '1px solid black' }}>
+                  <td style={{ padding: '8px', textAlign: 'right' }}>
                     ₹{Number(saleOrder.cgst_amount).toFixed(2)}
                   </td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid black' }}>
-                  <td
-                    colSpan={5}
-                    className="p-2 text-end"
-                    style={{ borderRight: '1px solid black' }}
-                  >
+                  <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                     SGST @ {sgstPercent}%:
                   </td>
-                  <td className="p-2 text-end" style={{ borderRight: '1px solid black' }}>
+                  <td style={{ padding: '8px', textAlign: 'right' }}>
                     ₹{Number(saleOrder.sgst_amount).toFixed(2)}
                   </td>
                 </tr>
@@ -372,17 +335,10 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
 
             {saleOrder.discount_amount > 0 && (
               <tr style={{ borderBottom: '1px solid black' }}>
-                <td
-                  colSpan={5}
-                  className="p-2 text-end"
-                  style={{ borderRight: '1px solid black' }}
-                >
+                <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                   Discount ({saleOrder.discount_percentage}%):
                 </td>
-                <td
-                  className="p-2 text-end text-success"
-                  style={{ borderRight: '1px solid black' }}
-                >
+                <td style={{ padding: '8px', textAlign: 'right', color: '#10b981' }}>
                   -₹{Number(saleOrder.discount_amount).toFixed(2)}
                 </td>
               </tr>
@@ -390,14 +346,10 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
 
             {saleOrder.round_off !== 0 && (
               <tr style={{ borderBottom: '1px solid black' }}>
-                <td
-                  colSpan={5}
-                  className="p-2 text-end"
-                  style={{ borderRight: '1px solid black' }}
-                >
+                <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                   Round Off:
                 </td>
-                <td className="p-2 text-end" style={{ borderRight: '1px solid black' }}>
+                <td style={{ padding: '8px', textAlign: 'right' }}>
                   {Number(saleOrder.round_off) > 0 ? '+' : ''}₹{Number(saleOrder.round_off).toFixed(2)}
                 </td>
               </tr>
@@ -406,15 +358,11 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             <tr style={{ borderBottom: '2px solid black', backgroundColor: '#f8f9fa' }}>
               <td
                 colSpan={5}
-                className="p-2 text-end fw-bold"
-                style={{ fontSize: '16px', borderRight: '1px solid black' }}
+                style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', fontSize: '16px', borderRight: '1px solid black' }}
               >
                 Grand Total:
               </td>
-              <td
-                className="p-2 text-end fw-bold"
-                style={{ fontSize: '16px', borderRight: '1px solid black' }}
-              >
+              <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', fontSize: '16px' }}>
                 ₹{Math.round(saleOrder.total_amount)}
               </td>
             </tr>
@@ -422,60 +370,60 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         </table>
 
         {/* Amount in Words */}
-        <div className="p-3" style={{ borderBottom: '2px solid black' }}>
-          <p className="fw-semibold mb-1">Amount in Words:</p>
-          <p className="fst-italic mb-0">{numberToWords(saleOrder.total_amount)}</p>
+        <div style={{ padding: '12px', borderBottom: '2px solid black' }}>
+          <p style={{ fontWeight: '600', marginBottom: '4px' }}>Amount in Words:</p>
+          <p style={{ fontStyle: 'italic', marginBottom: 0 }}>{numberToWords(saleOrder.total_amount)}</p>
         </div>
 
         {/* Bank Details & Terms */}
-        <div className="row g-0" style={{ borderBottom: '2px solid black' }}>
-          <div className="col-6 p-3" style={{ borderRight: '2px solid black' }}>
-            <p className="fw-semibold mb-2">Bank Details:</p>
+        <div style={{ display: 'flex', borderBottom: '2px solid black' }}>
+          <div style={{ flex: 1, padding: '12px', borderRight: '2px solid black' }}>
+            <p style={{ fontWeight: '600', marginBottom: '8px' }}>Bank Details:</p>
             <table style={{ fontSize: '13px', width: '100%' }}>
               <tbody>
                 <tr>
-                  <td className="py-1">Bank Name:</td>
-                  <td className="fw-medium">{currentCompany.bank_name || '-'}</td>
+                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>Bank Name:</td>
+                  <td style={{ fontWeight: '500' }}>{currentCompany.bank_name || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="py-1">A/c No:</td>
-                  <td className="fw-medium">{currentCompany.account_number || '-'}</td>
+                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>A/c No:</td>
+                  <td style={{ fontWeight: '500' }}>{currentCompany.account_number || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="py-1">IFSC Code:</td>
-                  <td className="fw-medium">{currentCompany.ifsc_code || '-'}</td>
+                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>IFSC Code:</td>
+                  <td style={{ fontWeight: '500' }}>{currentCompany.ifsc_code || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="py-1">Branch:</td>
-                  <td className="fw-medium">{currentCompany.branch || '-'}</td>
+                  <td style={{ paddingTop: '4px', paddingBottom: '4px' }}>Branch:</td>
+                  <td style={{ fontWeight: '500' }}>{currentCompany.branch || '-'}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div className="col-6 p-3">
-            <p className="fw-semibold mb-2">Terms & Conditions:</p>
-            <p style={{ fontSize: '12px', whiteSpace: 'pre-line' }} className="mb-0">
+          <div style={{ flex: 1, padding: '12px' }}>
+            <p style={{ fontWeight: '600', marginBottom: '8px' }}>Terms & Conditions:</p>
+            <p style={{ fontSize: '12px', whiteSpace: 'pre-line', marginBottom: 0 }}>
               {currentCompany.terms_and_conditions || 'Thank you for your business!'}
             </p>
           </div>
         </div>
 
         {/* Signature */}
-        <div className="p-4 text-end">
-          <p className="fw-semibold mb-5">For {currentCompany.company_name}</p>
-          <p className="d-inline-block border-top border-dark px-4 pt-1 mb-1">
+        <div style={{ padding: '16px', textAlign: 'right' }}>
+          <p style={{ fontWeight: '600', marginBottom: '60px' }}>For {currentCompany.company_name}</p>
+          <p style={{ display: 'inline-block', borderTop: '1px solid black', paddingLeft: '16px', paddingRight: '16px', paddingTop: '4px', marginBottom: '4px' }}>
             Authorized Signatory
           </p>
-          <p style={{ fontSize: '13px' }} className="mb-0">
+          <p style={{ fontSize: '13px', marginBottom: 0 }}>
             {currentCompany.authorized_signatory_name || ''}
           </p>
         </div>
       </div>
 
       {/* Footer Note */}
-      <div className="text-center mt-3" style={{ fontSize: '11px', color: '#6c757d' }}>
-        <p className="mb-0">
+      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '11px', color: '#6c757d' }}>
+        <p style={{ marginBottom: 0 }}>
           This is a computer-generated invoice and does not require a physical signature
         </p>
       </div>
