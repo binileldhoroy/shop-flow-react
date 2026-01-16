@@ -1,28 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
-import { Company } from '@types/company.types';
-import { StateMaster } from '@types/state.types';
-import { stateService } from '@api/services/state.service';
-
-interface CompanyFormData {
-  company_name: string;
-  email: string;
-  phone: string;
-  address_line1: string;
-  address_line2?: string;
-  city: string;
-  state: number | null; // FK to StateMaster
-  pincode: string;
-  country: string;
-  gst_number?: string;
-  logo?: File | null;
-}
+import Modal from '../../common/Modal/Modal';
+import { Company } from '../../../types/company.types';
+import { StateMaster } from '../../../types/state.types';
+import { stateService } from '../../../api/services/state.service';
 
 interface CompanyFormModalProps {
   show: boolean;
   onHide: () => void;
   onSubmit: (data: FormData) => void;
-  company?: Company | null;
+  company: Company | null;
   loading?: boolean;
 }
 
@@ -33,376 +19,418 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({
   company,
   loading = false,
 }) => {
-  const [formData, setFormData] = useState<CompanyFormData>({
+  const [formData, setFormData] = useState({
     company_name: '',
     email: '',
     phone: '',
+    address: '',
     address_line1: '',
-    address_line2: '',
     city: '',
-    state: null,
+    state: '',
     pincode: '',
-    country: 'India',
-    gst_number: '',
-    logo: null,
+    gstin: '',
+    pan: '',
+    bank_name: '',
+    branch: '',
+    ifsc_code: '',
+    account_number: '',
+    authorized_signatory_name: '',
+    username: '',
+    password: '',
+    is_active: true,
   });
-
-  // Admin user fields (only for new companies)
-  const [adminUsername, setAdminUsername] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [states, setStates] = useState<StateMaster[]>([]);
 
-  // Load states on mount
+  // Fetch states on mount
   useEffect(() => {
-    const loadStates = async () => {
+    const fetchStates = async () => {
       try {
         const statesData = await stateService.getAll();
         setStates(statesData);
       } catch (error) {
-        console.error('Failed to load states:', error);
+        console.error('Error fetching states:', error);
       }
     };
-    loadStates();
+    fetchStates();
   }, []);
 
   useEffect(() => {
     if (company) {
       setFormData({
-        company_name: company.company_name,
-        email: company.email,
-        phone: company.phone,
-        address_line1: company.address_line1,
-        address_line2: company.address_line2 || '',
-        city: company.city,
-        state: company.state, // Already a number (FK)
-        pincode: company.pincode,
-        country: company.country,
-        gst_number: company.gst_number || '',
-        logo: null,
+        company_name: company.company_name || '',
+        email: company.email || '',
+        phone: company.phone || '',
+        address: company.address || '',
+        address_line1: company.address_line1 || '',
+        city: company.city || '',
+        state: company.state || '',
+        pincode: company.pincode || '',
+        gstin: company.gstin || '',
+        pan: company.pan || '',
+        bank_name: company.bank_name || '',
+        branch: company.branch || '',
+        ifsc_code: company.ifsc_code || '',
+        account_number: company.account_number || '',
+        authorized_signatory_name: company.authorized_signatory_name || '',
+        username: '', // Not needed for edit
+        password: '', // Not needed for edit
+        is_active: company.is_active ?? true,
       });
-      if (company.logo) {
-        setLogoPreview(company.logo);
-      }
     } else {
       setFormData({
         company_name: '',
         email: '',
         phone: '',
+        address: '',
         address_line1: '',
-        address_line2: '',
         city: '',
-        state: null,
+        state: '',
         pincode: '',
-        country: 'India',
-        gst_number: '',
-        logo: null,
+        gstin: '',
+        pan: '',
+        bank_name: '',
+        branch: '',
+        ifsc_code: '',
+        account_number: '',
+        authorized_signatory_name: '',
+        username: '',
+        password: '',
+        is_active: true,
       });
-      setLogoPreview(null);
     }
+    setLogoFile(null);
   }, [company, show]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const data = new FormData();
 
-    const submitData = new FormData();
+    // Find the state ID from the state name
+    const selectedState = states.find(s => s.name === formData.state);
+
+    // Add all fields except username/password and state
     Object.entries(formData).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '') {
-        if (key === 'logo' && value instanceof File) {
-          submitData.append(key, value);
-        } else if (key !== 'logo') {
-          submitData.append(key, value.toString());
-        }
+      // Skip username and password for editing, only include for new companies
+      if (company && (key === 'username' || key === 'password')) {
+        return;
       }
+
+      // Skip state here, we'll add it separately with the ID
+      if (key === 'state') {
+        return;
+      }
+
+      data.append(key, value.toString());
     });
 
-    onSubmit(submitData);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({ ...prev, logo: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    // Add state ID instead of state name
+    if (selectedState) {
+      data.append('state', selectedState.id.toString());
     }
+
+    // Add logo file if selected
+    if (logoFile) {
+      data.append('logo', logoFile, logoFile.name);
+    }
+
+    // Debug: Log what we're sending
+    console.log('Form data being sent:');
+    for (let [key, value] of data.entries()) {
+      console.log(`${key}:`, value);
+    }
+
+    onSubmit(data);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <i className={`bi bi-${company ? 'pencil' : 'plus-circle'} me-2`}></i>
-          {company ? 'Edit Company' : 'Add New Company'}
-        </Modal.Title>
-      </Modal.Header>
+    <Modal
+      show={show}
+      onHide={onHide}
+      title={company ? 'Edit Company' : 'Add Company'}
+      size="lg"
+      footer={
+        <>
+          <button className="btn btn-secondary" onClick={onHide} disabled={loading}>
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : 'Save'}
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="label">Company Name *</label>
+            <input
+              type="text"
+              name="company_name"
+              className="input-field"
+              value={formData.company_name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">Email *</label>
+            <input
+              type="email"
+              name="email"
+              className="input-field"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">Phone *</label>
+            <input
+              type="tel"
+              name="phone"
+              className="input-field"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">GSTIN</label>
+            <input
+              type="text"
+              name="gstin"
+              className="input-field"
+              value={formData.gstin}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
 
-      <Form onSubmit={handleSubmit}>
-        <Modal.Body>
-          <div className="row">
-            {/* Company Logo */}
-            <div className="col-12 mb-3">
-              <Form.Group>
-                <Form.Label>Company Logo</Form.Label>
-                <div className="d-flex align-items-center gap-3">
-                  {logoPreview && (
-                    <img
-                      src={logoPreview}
-                      alt="Logo preview"
-                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
-                    />
-                  )}
-                  <Form.Control
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                  />
-                </div>
-              </Form.Group>
+        {!company && (
+          <>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-blue-900 mb-2">Admin User Credentials</h4>
+              <p className="text-sm text-blue-700">Create login credentials for the company administrator</p>
             </div>
-
-            {/* Company Name */}
-            <div className="col-md-6 mb-3">
-              <Form.Group>
-                <Form.Label>Company Name *</Form.Label>
-                <Form.Control
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Username *</label>
+                <input
                   type="text"
-                  name="company_name"
-                  value={formData.company_name}
+                  name="username"
+                  className="input-field"
+                  value={formData.username}
                   onChange={handleChange}
-                  required
-                  placeholder="Enter company name"
+                  required={!company}
+                  placeholder="Admin username"
                 />
-              </Form.Group>
-            </div>
-
-            {/* Email */}
-            <div className="col-md-6 mb-3">
-              <Form.Group>
-                <Form.Label>Email *</Form.Label>
-                <Form.Control
-                  type="email"
-                  name="email"
-                  value={formData.email}
+              </div>
+              <div>
+                <label className="label">Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  className="input-field"
+                  value={formData.password}
                   onChange={handleChange}
-                  required
-                  placeholder="company@example.com"
+                  required={!company}
+                  placeholder="Admin password"
+                  minLength={6}
                 />
-              </Form.Group>
+              </div>
             </div>
+          </>
+        )}
 
-            {/* Phone */}
-            <div className="col-md-6 mb-3">
-              <Form.Group>
-                <Form.Label>Phone *</Form.Label>
-                <Form.Control
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter phone number"
-                />
-              </Form.Group>
+        {/* Address Section */}
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-semibold text-gray-900 mb-3">Address Information</h4>
+          <div className="space-y-4">
+            <div>
+              <label className="label">Address Line 1 *</label>
+              <input
+                type="text"
+                name="address_line1"
+                className="input-field"
+                value={formData.address_line1}
+                onChange={handleChange}
+                required
+                placeholder="Street address, building name"
+              />
             </div>
-
-            {/* GST Number */}
-            <div className="col-md-6 mb-3">
-              <Form.Group>
-                <Form.Label>GST Number</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="gst_number"
-                  value={formData.gst_number}
-                  onChange={handleChange}
-                  placeholder="Enter GST number"
-                />
-              </Form.Group>
-            </div>
-
-            {/* Address Line 1 */}
-            <div className="col-12 mb-3">
-              <Form.Group>
-                <Form.Label>Address Line 1 *</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="address_line1"
-                  value={formData.address_line1}
-                  onChange={handleChange}
-                  required
-                  placeholder="Street address"
-                />
-              </Form.Group>
-            </div>
-
-            {/* Address Line 2 */}
-            <div className="col-12 mb-3">
-              <Form.Group>
-                <Form.Label>Address Line 2</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="address_line2"
-                  value={formData.address_line2}
-                  onChange={handleChange}
-                  placeholder="Apartment, suite, etc."
-                />
-              </Form.Group>
-            </div>
-
-            {/* City */}
-            <div className="col-md-4 mb-3">
-              <Form.Group>
-                <Form.Label>City *</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  required
-                  placeholder="City"
-                />
-              </Form.Group>
-            </div>
-
-            {/* State */}
-            <div className="col-md-4 mb-3">
-              <Form.Group>
-                <Form.Label>State *</Form.Label>
-                <Form.Select
-                  name="state"
-                  value={formData.state || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value ? Number(e.target.value) : null }))}
-                  required
-                >
-                  <option value="">Select State</option>
-                  {states.map(state => (
-                    <option key={state.id} value={state.id}>
-                      {state.name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </div>
-
-            {/* Pincode */}
-            <div className="col-md-4 mb-3">
-              <Form.Group>
-                <Form.Label>Pincode *</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="pincode"
-                  value={formData.pincode}
-                  onChange={handleChange}
-                  required
-                  placeholder="Pincode"
-                />
-              </Form.Group>
-            </div>
-
-            {/* Country */}
-            <div className="col-md-6 mb-3">
-              <Form.Group>
-                <Form.Label>Country *</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  required
-                  placeholder="Country"
-                />
-              </Form.Group>
+            <div>
+              <label className="label">Address (Additional)</label>
+              <textarea
+                name="address"
+                className="input-field"
+                rows={2}
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Additional address details"
+              />
             </div>
           </div>
+        </div>
 
-          {/* Admin User Section - Only for new companies */}
-          {!company && (
-            <>
-              <hr className="my-4" />
-              <h5 className="mb-3">
-                <i className="bi bi-person-badge me-2"></i>
-                Admin User Account
-              </h5>
-              <p className="text-muted small mb-3">
-                Create an admin user account for this company. This user will have full access to manage the company.
-              </p>
+        {/* Bank Details Section */}
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-semibold text-gray-900 mb-3">Bank Details</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Bank Name *</label>
+              <input
+                type="text"
+                name="bank_name"
+                className="input-field"
+                value={formData.bank_name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Branch *</label>
+              <input
+                type="text"
+                name="branch"
+                className="input-field"
+                value={formData.branch}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="label">IFSC Code *</label>
+              <input
+                type="text"
+                name="ifsc_code"
+                className="input-field"
+                value={formData.ifsc_code}
+                onChange={handleChange}
+                required
+                placeholder="e.g., SBIN0001234"
+              />
+            </div>
+            <div>
+              <label className="label">Account Number *</label>
+              <input
+                type="text"
+                name="account_number"
+                className="input-field"
+                value={formData.account_number}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+        </div>
 
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <Form.Group>
-                    <Form.Label>Admin Username *</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={adminUsername}
-                      onChange={(e) => setAdminUsername(e.target.value)}
-                      required
-                      placeholder="Enter admin username"
-                    />
-                  </Form.Group>
-                </div>
+        {/* Other Details */}
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-semibold text-gray-900 mb-3">Other Details</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">PAN Number</label>
+              <input
+                type="text"
+                name="pan"
+                className="input-field"
+                value={formData.pan}
+                onChange={handleChange}
+                placeholder="e.g., ABCDE1234F"
+              />
+            </div>
+            <div>
+              <label className="label">Authorized Signatory Name *</label>
+              <input
+                type="text"
+                name="authorized_signatory_name"
+                className="input-field"
+                value={formData.authorized_signatory_name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+        </div>
 
-                <div className="col-md-6 mb-3">
-                  <Form.Group>
-                    <Form.Label>Admin Email</Form.Label>
-                    <Form.Control
-                      type="email"
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      placeholder="admin@company.com"
-                    />
-                  </Form.Group>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="label">City *</label>
+            <input
+              type="text"
+              name="city"
+              className="input-field"
+              value={formData.city}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">State *</label>
+            <select
+              name="state"
+              className="input-field"
+              value={formData.state}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select State</option>
+              {states.map(state => (
+                <option key={state.id} value={state.name}>
+                  {state.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Pincode</label>
+            <input
+              type="text"
+              name="pincode"
+              className="input-field"
+              value={formData.pincode}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
 
-                <div className="col-md-6 mb-3">
-                  <Form.Group>
-                    <Form.Label>Admin Password *</Form.Label>
-                    <Form.Control
-                      type="password"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      required
-                      placeholder="Enter admin password"
-                      minLength={6}
-                    />
-                    <Form.Text className="text-muted">
-                      Minimum 6 characters
-                    </Form.Text>
-                  </Form.Group>
-                </div>
-              </div>
-            </>
-          )}
-        </Modal.Body>
+        <div>
+          <label className="label">Logo</label>
+          <input
+            type="file"
+            accept="image/*"
+            className="input-field"
+            onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+          />
+        </div>
 
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onHide} disabled={loading}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit" disabled={loading}>
-            {loading ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" />
-                {company ? 'Updating...' : 'Creating...'}
-              </>
-            ) : (
-              <>
-                <i className={`bi bi-${company ? 'check' : 'plus'}-circle me-2`}></i>
-                {company ? 'Update Company' : 'Create Company'}
-              </>
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="is_active"
+            id="is_active"
+            checked={formData.is_active}
+            onChange={handleChange}
+            className="w-4 h-4 text-primary-600 rounded"
+          />
+          <label htmlFor="is_active" className="text-sm text-gray-700">
+            Active
+          </label>
+        </div>
+      </form>
     </Modal>
   );
 };

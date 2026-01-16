@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { productService, categoryService } from '@api/services/product.service';
-import { Product, Category, ProductFormData } from '@types/product.types';
+import { Product, Category, ProductFormData } from '../../types/product.types';
 import ProductFormModal from '@components/features/products/ProductFormModal';
 import DeleteConfirmModal from '@components/common/DeleteConfirmModal/DeleteConfirmModal';
 import { useAppDispatch } from '@hooks/useRedux';
 import { addNotification } from '@store/slices/uiSlice';
+import { Package, Plus, Search, Edit2, Trash2, Inbox, AlertTriangle } from 'lucide-react';
 
 const Products: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -133,44 +134,39 @@ const Products: React.FC = () => {
   };
 
   return (
-    <div className="container-fluid">
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h1 className="h3 mb-0">
-                <i className="bi bi-box-seam me-2"></i>
-                Products
-              </h1>
-              <p className="text-muted">Manage your product inventory</p>
-            </div>
-            <button className="btn btn-primary" onClick={handleAddProduct}>
-              <i className="bi bi-plus-circle me-2"></i>
-              Add Product
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-content-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Package className="w-8 h-8" />
+            Products
+          </h1>
+          <p className="text-gray-600 mt-1">Manage your product inventory</p>
         </div>
+        <button className="btn btn-primary" onClick={handleAddProduct}>
+          <Plus className="w-5 h-5 inline mr-2" />
+          Add Product
+        </button>
       </div>
 
       {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-4">
-          <div className="input-group">
-            <span className="input-group-text">
-              <i className="bi bi-search"></i>
-            </span>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <div className="md:col-span-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              className="form-control"
+              className="input-field pl-10"
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
-        <div className="col-md-3">
+        <div className="md:col-span-3">
           <select
-            className="form-select"
+            className="input-field"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
           >
@@ -182,9 +178,9 @@ const Products: React.FC = () => {
             ))}
           </select>
         </div>
-        <div className="col-md-2">
+        <div className="md:col-span-2">
           <select
-            className="form-select"
+            className="input-field"
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value)}
           >
@@ -194,104 +190,98 @@ const Products: React.FC = () => {
             <option value="out">Out of Stock</option>
           </select>
         </div>
-        <div className="col-md-3 text-end">
-          <span className="text-muted">
+        <div className="md:col-span-3 flex items-center justify-end">
+          <span className="text-gray-600">
             {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
 
       {/* Products Table */}
-      <div className="row">
-        <div className="col-12">
-          <div className="card">
-            <div className="card-body">
-              {loading ? (
-                <div className="text-center py-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="text-center py-5">
-                  <i className="bi bi-inbox fs-1 text-muted"></i>
-                  <p className="text-muted mt-2">No products found</p>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead>
-                      <tr>
-                        <th>SKU</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Price</th>
-                        <th>Stock</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredProducts.map(product => (
-                        <tr key={product.id}>
-                          <td>
-                            <strong>{product.sku}</strong>
-                            {product.barcode && (
-                              <div className="text-muted small">{product.barcode}</div>
-                            )}
-                          </td>
-                          <td>{product.name}</td>
-                          <td>
-                            <span className="badge bg-secondary">
-                              {getCategoryName(product.category)}
-                            </span>
-                          </td>
-                          <td>₹{parseFloat(String(product.selling_price || product.unit_price || 0)).toFixed(2)}</td>
-                          <td>
-                            <span className={`badge bg-${
-                              product.stock_quantity === 0 ? 'danger' :
-                              product.stock_quantity <= product.reorder_level ? 'warning' :
-                              'success'
-                            }`}>
-                              {product.stock_quantity} units
-                            </span>
-                            {product.stock_quantity <= product.reorder_level && product.stock_quantity > 0 && (
-                              <div className="text-warning small">
-                                <i className="bi bi-exclamation-triangle me-1"></i>
-                                Low stock
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            <span className={`badge bg-${product.is_active ? 'success' : 'secondary'}`}>
-                              {product.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td>
-                            <button
-                              className="btn btn-sm btn-outline-primary me-2"
-                              onClick={() => handleEditProduct(product)}
-                              title="Edit"
-                            >
-                              <i className="bi bi-pencil"></i>
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleDeleteProduct(product)}
-                              title="Delete"
-                            >
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+      <div className="card">
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-        </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">No products found</p>
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map(product => (
+                  <tr key={product.id}>
+                    <td>
+                      <strong>{product.sku}</strong>
+                      {product.barcode && (
+                        <div className="text-gray-500 text-xs">{product.barcode}</div>
+                      )}
+                    </td>
+                    <td>{product.name}</td>
+                    <td>
+                      <span className="badge badge-secondary">
+                        {getCategoryName(product.category)}
+                      </span>
+                    </td>
+                    <td>₹{parseFloat(String(product.selling_price || product.unit_price || 0)).toFixed(2)}</td>
+                    <td>
+                      <span className={`badge ${
+                        product.stock_quantity === 0 ? 'badge-danger' :
+                        product.stock_quantity <= product.reorder_level ? 'badge-warning' :
+                        'badge-success'
+                      }`}>
+                        {product.stock_quantity} units
+                      </span>
+                      {product.stock_quantity <= product.reorder_level && product.stock_quantity > 0 && (
+                        <div className="text-warning-600 text-xs mt-1 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Low stock
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge ${product.is_active ? 'badge-success' : 'badge-secondary'}`}>
+                        {product.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex gap-2">
+                        <button
+                          className="btn btn-outline-primary text-sm"
+                          onClick={() => handleEditProduct(product)}
+                          title="Edit"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="btn btn-outline-danger text-sm"
+                          onClick={() => handleDeleteProduct(product)}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Modals */}

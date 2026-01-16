@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Button } from 'react-bootstrap';
+import Modal from '../../common/Modal/Modal';
+import { AlertTriangle } from 'lucide-react';
 
 interface DeleteConfirmModalProps {
   show: boolean;
@@ -19,36 +20,45 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   loading = false,
 }) => {
   return (
-    <Modal show={show} onHide={onHide} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
-          <i className="bi bi-exclamation-triangle text-danger me-2"></i>
-          {title}
-        </Modal.Title>
-      </Modal.Header>
-
-      <Modal.Body>
-        <p>{message}</p>
-      </Modal.Body>
-
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onHide} disabled={loading}>
-          Cancel
-        </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={loading}>
-          {loading ? (
-            <>
-              <span className="spinner-border spinner-border-sm me-2" />
-              Deleting...
-            </>
-          ) : (
-            <>
-              <i className="bi bi-trash me-2"></i>
-              Delete
-            </>
-          )}
-        </Button>
-      </Modal.Footer>
+    <Modal
+      show={show}
+      onHide={onHide}
+      title={title}
+      size="md"
+      footer={
+        <>
+          <button
+            className="btn btn-secondary"
+            onClick={onHide}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Deleting...</span>
+              </div>
+            ) : (
+              'Delete'
+            )}
+          </button>
+        </>
+      }
+    >
+      <div className="flex items-start gap-4">
+        <div className="bg-danger-100 p-3 rounded-full">
+          <AlertTriangle className="w-6 h-6 text-danger-600" />
+        </div>
+        <div className="flex-1">
+          <p className="text-gray-700">{message}</p>
+        </div>
+      </div>
     </Modal>
   );
 };

@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@hooks/useRedux';
 import { fetchAllCompanies } from '@store/slices/companySlice';
 import { companyService } from '@api/services/company.service';
-import { Company } from '@types/company.types';
+import { Company } from '../../types/company.types';
 import CompanyFormModal from '@components/features/companies/CompanyFormModal';
 import DeleteConfirmModal from '@components/common/DeleteConfirmModal/DeleteConfirmModal';
 import { addNotification } from '@store/slices/uiSlice';
+import { Building2, Plus, Search, Mail, Phone, MapPin, Edit2, Trash2, Play, Pause, Inbox } from 'lucide-react';
 
 const Companies: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -71,6 +72,7 @@ const Companies: React.FC = () => {
         }));
       } else {
         // Create
+        console.log('Creating new company...');
         await companyService.create(data);
         dispatch(addNotification({
           message: 'Company created successfully',
@@ -81,8 +83,16 @@ const Companies: React.FC = () => {
       setShowFormModal(false);
       dispatch(fetchAllCompanies());
     } catch (error: any) {
+      console.error('Company operation error:', error);
+      console.error('Error response:', error.response);
+      const errorMessage = error.response?.data?.message
+        || error.response?.data?.error
+        || error.response?.data?.detail
+        || error.message
+        || 'Operation failed';
+
       dispatch(addNotification({
-        message: error.response?.data?.message || 'Operation failed',
+        message: errorMessage,
         type: 'error',
       }));
     } finally {
@@ -125,44 +135,39 @@ const Companies: React.FC = () => {
   });
 
   return (
-    <div className="container-fluid">
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h1 className="h3 mb-0">
-                <i className="bi bi-building me-2"></i>
-                Companies
-              </h1>
-              <p className="text-muted">Manage all companies in the system</p>
-            </div>
-            <button className="btn btn-primary" onClick={handleAddCompany}>
-              <i className="bi bi-plus-circle me-2"></i>
-              Add Company
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Building2 className="w-8 h-8" />
+            Companies
+          </h1>
+          <p className="text-gray-600 mt-1">Manage all companies in the system</p>
         </div>
+        <button className="btn btn-primary" onClick={handleAddCompany}>
+          <Plus className="w-5 h-5 inline mr-2" />
+          Add Company
+        </button>
       </div>
 
       {/* Filters */}
-      <div className="row mb-4">
-        <div className="col-md-6">
-          <div className="input-group">
-            <span className="input-group-text">
-              <i className="bi bi-search"></i>
-            </span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              className="form-control"
+              className="input-field pl-10"
               placeholder="Search companies..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
-        <div className="col-md-3">
+        <div className="flex items-center justify-between gap-4">
           <select
-            className="form-select"
+            className="input-field flex-1"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -170,99 +175,95 @@ const Companies: React.FC = () => {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
-        </div>
-        <div className="col-md-3 text-end">
-          <span className="text-muted">
+          <span className="text-gray-600 whitespace-nowrap">
             {filteredCompanies.length} compan{filteredCompanies.length !== 1 ? 'ies' : 'y'}
           </span>
         </div>
       </div>
 
       {/* Companies Grid */}
-      <div className="row">
-        {reduxLoading ? (
-          <div className="col-12">
-            <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-            </div>
-          </div>
-        ) : filteredCompanies.length === 0 ? (
-          <div className="col-12">
-            <div className="card">
-              <div className="card-body text-center py-5">
-                <i className="bi bi-inbox fs-1 text-muted"></i>
-                <p className="text-muted mt-2">No companies found</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          filteredCompanies.map(company => (
-            <div key={company.id} className="col-md-6 col-lg-4 mb-4">
-              <div className="card h-100">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start mb-3">
-                    <div className="d-flex align-items-center gap-3">
-                      {company.logo && (
-                        <img
-                          src={company.logo}
-                          alt={company.company_name}
-                          style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px' }}
-                        />
-                      )}
-                      <div>
-                        <h5 className="mb-0">{company.company_name}</h5>
-                        <span className={`badge bg-${company.is_active ? 'success' : 'secondary'} mt-1`}>
-                          {company.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <p className="mb-1">
-                      <i className="bi bi-envelope me-2 text-muted"></i>
-                      <small>{company.email}</small>
-                    </p>
-                    <p className="mb-1">
-                      <i className="bi bi-telephone me-2 text-muted"></i>
-                      <small>{company.phone}</small>
-                    </p>
-                    <p className="mb-0">
-                      <i className="bi bi-geo-alt me-2 text-muted"></i>
-                      <small>{company.city}, {company.state}</small>
-                    </p>
-                  </div>
-
-                  <div className="d-flex gap-2">
-                    <button
-                      className="btn btn-sm btn-outline-primary flex-fill"
-                      onClick={() => handleEditCompany(company)}
-                    >
-                      <i className="bi bi-pencil me-1"></i>
-                      Edit
-                    </button>
-                    <button
-                      className={`btn btn-sm btn-outline-${company.is_active ? 'warning' : 'success'} flex-fill`}
-                      onClick={() => handleToggleStatus(company)}
-                    >
-                      <i className={`bi bi-${company.is_active ? 'pause' : 'play'}-circle me-1`}></i>
-                      {company.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => handleDeleteCompany(company)}
-                    >
-                      <i className="bi bi-trash"></i>
-                    </button>
-                  </div>
+      {reduxLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : filteredCompanies.length === 0 ? (
+        <div className="card text-center py-12">
+          <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">No companies found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCompanies.map(company => (
+            <div key={company.id} className="card">
+              <div className="flex items-start gap-3 mb-4">
+                {company.logo ? (
+                  <img
+                    src={company.logo}
+                    alt={company.company_name}
+                    className="w-12 h-12 object-cover rounded-lg"
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling;
+                      if (fallback) fallback.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <div className={`w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center ${company.logo ? 'hidden' : ''}`}>
+                  <Building2 className="w-6 h-6 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h5 className="font-semibold text-gray-900">{company.company_name}</h5>
+                  <span className={`badge ${company.is_active ? 'badge-success' : 'badge-secondary'} mt-1`}>
+                    {company.is_active ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
               </div>
+
+              <div className="space-y-2 mb-4">
+                <p className="flex items-center gap-2 text-sm text-gray-600">
+                  <Mail className="w-4 h-4" />
+                  {company.email}
+                </p>
+                <p className="flex items-center gap-2 text-sm text-gray-600">
+                  <Phone className="w-4 h-4" />
+                  {company.phone}
+                </p>
+                <p className="flex items-center gap-2 text-sm text-gray-600">
+                  <MapPin className="w-4 h-4" />
+                  {company.city}, {company.state}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  className="btn btn-outline-primary text-sm flex-1"
+                  onClick={() => handleEditCompany(company)}
+                >
+                  <Edit2 className="w-4 h-4 inline mr-1" />
+                  Edit
+                </button>
+                <button
+                  className={`btn ${company.is_active ? 'btn-outline-warning' : 'btn-outline-success'} text-sm flex-1`}
+                  onClick={() => handleToggleStatus(company)}
+                >
+                  {company.is_active ? (
+                    <><Pause className="w-4 h-4 inline mr-1" />Deactivate</>
+                  ) : (
+                    <><Play className="w-4 h-4 inline mr-1" />Activate</>
+                  )}
+                </button>
+                <button
+                  className="btn btn-outline-danger text-sm"
+                  onClick={() => handleDeleteCompany(company)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modals */}
       <CompanyFormModal

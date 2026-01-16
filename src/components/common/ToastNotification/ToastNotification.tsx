@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@hooks/useRedux';
 import { removeNotification } from '@store/slices/uiSlice';
-import './ToastNotification.css';
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 const ToastNotification: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -21,30 +21,52 @@ const ToastNotification: React.FC = () => {
 
   if (notifications.length === 0) return null;
 
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5" />;
+      case 'error':
+        return <XCircle className="w-5 h-5" />;
+      case 'warning':
+        return <AlertTriangle className="w-5 h-5" />;
+      default:
+        return <Info className="w-5 h-5" />;
+    }
+  };
+
+  const getColorClasses = (type: string) => {
+    switch (type) {
+      case 'success':
+        return 'bg-success-600 text-white';
+      case 'error':
+        return 'bg-danger-600 text-white';
+      case 'warning':
+        return 'bg-warning-600 text-white';
+      default:
+        return 'bg-info-600 text-white';
+    }
+  };
+
   return (
-    <div className="toast-container position-fixed top-0 end-0 p-3" style={{ zIndex: 9999 }}>
+    <div className="fixed top-4 right-4 z-[9999] space-y-2">
       {notifications.map(notification => (
         <div
           key={notification.id}
-          className={`toast show align-items-center text-white bg-${notification.type === 'error' ? 'danger' : notification.type} border-0`}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg min-w-[300px] max-w-md animate-fadeIn ${getColorClasses(notification.type)}`}
           role="alert"
         >
-          <div className="d-flex">
-            <div className="toast-body">
-              <i className={`bi bi-${
-                notification.type === 'success' ? 'check-circle' :
-                notification.type === 'error' ? 'x-circle' :
-                notification.type === 'warning' ? 'exclamation-triangle' :
-                'info-circle'
-              } me-2`}></i>
-              {notification.message}
-            </div>
-            <button
-              type="button"
-              className="btn-close btn-close-white me-2 m-auto"
-              onClick={() => dispatch(removeNotification(notification.id))}
-            ></button>
+          {getIcon(notification.type)}
+          <div className="flex-1 text-sm font-medium">
+            {notification.message}
           </div>
+          <button
+            type="button"
+            className="p-1 hover:bg-white/20 rounded transition-colors duration-200"
+            onClick={() => dispatch(removeNotification(notification.id))}
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       ))}
     </div>

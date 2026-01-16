@@ -5,7 +5,7 @@ import { useAuth } from '@hooks/useAuth';
 import { useCompany } from '@hooks/useCompany';
 import { logout } from '@store/slices/authSlice';
 import { toggleSidebar } from '@store/slices/uiSlice';
-import './Header.css';
+import { Menu, ChevronDown, ChevronUp, User, Settings, LogOut } from 'lucide-react';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -45,77 +45,85 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="header">
-      <div className="header-content">
-        <div className="header-left">
+    <header className="bg-white shadow-md sticky top-0 z-50">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-4">
           <button
-            className="menu-toggle"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 lg:hidden"
             onClick={() => dispatch(toggleSidebar())}
             aria-label="Toggle menu"
           >
-            <i className="bi bi-list"></i>
+            <Menu className="w-6 h-6 text-gray-700" />
           </button>
 
           {currentCompany && (
-            <div className="company-info">
+            <div className="flex items-center gap-3">
               {currentCompany.logo && (
                 <img
                   src={currentCompany.logo}
                   alt={currentCompany.company_name}
-                  className="company-logo"
+                  className="h-10 w-10 object-contain rounded"
                 />
               )}
-              <h1 className="company-name">{currentCompany.company_name}</h1>
+              <h1 className="text-xl font-bold text-gray-800 hidden md:block">
+                {currentCompany.company_name}
+              </h1>
             </div>
           )}
         </div>
 
-        <div className="header-right">
-          <div className="user-menu" ref={dropdownRef}>
+        <div className="flex items-center gap-4">
+          <div className="relative" ref={dropdownRef}>
             <button
-              className="user-button"
+              className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
               onClick={() => setShowUserMenu(!showUserMenu)}
             >
-              <div className="user-avatar">{getUserInitials()}</div>
-              <div className="user-info">
-                <p className="user-name">
+              <div className="w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold">
+                {getUserInitials()}
+              </div>
+              <div className="hidden md:block text-left">
+                <p className="text-sm font-medium text-gray-900">
                   {user?.first_name || user?.username}
                 </p>
-                <p className="user-role">
+                <p className="text-xs text-gray-500 capitalize">
                   {user?.role.replace('_', ' ')}
                 </p>
               </div>
-              <i className={`bi bi-chevron-${showUserMenu ? 'up' : 'down'}`}></i>
+              {showUserMenu ? (
+                <ChevronUp className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              )}
             </button>
 
             {showUserMenu && (
-              <div className="dropdown-menu show">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 animate-fadeIn">
                 <button
-                  className="dropdown-item"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                   onClick={() => {
                     setShowUserMenu(false);
                     navigate('/settings');
                   }}
                 >
-                  <i className="bi bi-person"></i>
+                  <User className="w-4 h-4" />
                   Profile
                 </button>
                 <button
-                  className="dropdown-item"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                   onClick={() => {
                     setShowUserMenu(false);
                     navigate('/settings');
                   }}
                 >
-                  <i className="bi bi-gear"></i>
+                  <Settings className="w-4 h-4" />
                   Settings
                 </button>
-                <div className="dropdown-divider"></div>
+                <div className="border-t border-gray-200 my-1"></div>
                 <button
-                  className="dropdown-item danger"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 transition-colors duration-150"
                   onClick={handleLogout}
                 >
-                  <i className="bi bi-box-arrow-right"></i>
+                  <LogOut className="w-4 h-4" />
                   Logout
                 </button>
               </div>

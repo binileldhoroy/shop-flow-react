@@ -3,11 +3,45 @@ import { NavLink } from 'react-router-dom';
 import { useAppSelector } from '@hooks/useRedux';
 import { useAuth } from '@hooks/useAuth';
 import { UserRole } from '@types/auth.types';
-import './Sidebar.css';
+import {
+  LayoutDashboard,
+  Building2,
+  Calculator,
+  Package,
+  Tags,
+  ShoppingCart,
+  Users,
+  FileText,
+  Boxes,
+  ShoppingBag,
+  Truck,
+  CreditCard,
+  TrendingUp,
+  UserCog,
+  Settings,
+} from 'lucide-react';
+
+const iconMap: Record<string, React.ElementType> = {
+  speedometer2: LayoutDashboard,
+  building: Building2,
+  calculator: Calculator,
+  'box-seam': Package,
+  tags: Tags,
+  'cart-check': ShoppingCart,
+  people: Users,
+  'file-earmark-text': FileText,
+  boxes: Boxes,
+  'bag-plus': ShoppingBag,
+  truck: Truck,
+  'credit-card': CreditCard,
+  'graph-up': TrendingUp,
+  'person-badge': UserCog,
+  gear: Settings,
+};
 
 const Sidebar: React.FC = () => {
   const { sidebarOpen } = useAppSelector((state) => state.ui);
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
 
   const navigationItems = [
     {
@@ -107,25 +141,43 @@ const Sidebar: React.FC = () => {
   );
 
   return (
-    <>
-      <aside className={`sidebar ${!sidebarOpen ? 'closed' : ''}`}>
-        <nav className="sidebar-nav">
-          {filteredItems.map((item) => (
-            <div key={item.path} className="nav-item">
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  `nav-link ${isActive ? 'active' : ''}`
-                }
-              >
-                <i className={`bi bi-${item.icon}`}></i>
-                <span>{item.label}</span>
-              </NavLink>
-            </div>
-          ))}
+    <aside
+      className={`fixed left-0 top-0 h-screen bg-white shadow-lg transition-all duration-300 z-40 ${
+        sidebarOpen ? 'w-64' : 'w-0 lg:w-20'
+      }`}
+    >
+      <div className="flex flex-col h-full pt-20">
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <div className="space-y-1">
+            {filteredItems.map((item) => {
+              const Icon = iconMap[item.icon];
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    } ${!sidebarOpen && 'lg:justify-center'}`
+                  }
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span
+                    className={`font-medium ${
+                      !sidebarOpen && 'lg:hidden'
+                    } ${sidebarOpen ? 'block' : 'hidden lg:hidden'}`}
+                  >
+                    {item.label}
+                  </span>
+                </NavLink>
+              );
+            })}
+          </div>
         </nav>
-      </aside>
-    </>
+      </div>
+    </aside>
   );
 };
 

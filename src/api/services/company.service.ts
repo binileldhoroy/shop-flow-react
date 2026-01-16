@@ -6,6 +6,7 @@ export const companyService = {
   // Get all companies (super user only)
   getAll: async (): Promise<Company[]> => {
     const response = await axiosInstance.get<Company[]>(API_ENDPOINTS.COMPANY.LIST);
+    console.log(response.data);
     return response.data;
   },
 
@@ -23,16 +24,21 @@ export const companyService = {
 
   // Create company (super user only)
   create: async (data: CompanyFormData): Promise<Company> => {
-    const response = await axiosInstance.post<Company>(API_ENDPOINTS.COMPANY.LIST, data);
+    const response = await axiosInstance.post<Company>(API_ENDPOINTS.COMPANY.LIST, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
-  // Update company
+  // Update company (super user only)
   update: async (id: number, data: Partial<CompanyFormData>): Promise<Company> => {
-    const response = await axiosInstance.put<Company>(
-      API_ENDPOINTS.COMPANY.DETAIL(id),
-      data
-    );
+    const response = await axiosInstance.put<Company>(`${API_ENDPOINTS.COMPANY.DETAIL(id)}`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

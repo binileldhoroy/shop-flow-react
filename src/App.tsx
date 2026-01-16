@@ -3,10 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store';
 
-// Import Bootstrap CSS
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-icons/font/bootstrap-icons.css';
+// Import global CSS with Tailwind
 import './assets/styles/global.css';
+
 
 // Layout
 import Layout from './components/layout/Layout/Layout';

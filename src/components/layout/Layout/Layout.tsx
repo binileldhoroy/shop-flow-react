@@ -5,7 +5,6 @@ import { fetchCurrentCompany } from '@store/slices/companySlice';
 import Header from '../Header/Header';
 import Sidebar from '../Sidebar/Sidebar';
 import ToastNotification from '@components/common/ToastNotification/ToastNotification';
-import './Layout.css';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,11 +23,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [dispatch, isSuperUser]);
 
   return (
-    <div className="layout">
+    <div className="min-h-screen bg-gray-50">
       <Header />
       <Sidebar />
-      <main className={`layout-main ${!sidebarOpen ? 'sidebar-closed' : ''}`}>
-        <div className="layout-content">{children}</div>
+      <main
+        className={`transition-all duration-300 pt-4 ${
+          sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
+        }`}
+      >
+        <div className="px-4 py-6 max-w-7xl mx-auto">{children}</div>
       </main>
       <ToastNotification />
     </div>
