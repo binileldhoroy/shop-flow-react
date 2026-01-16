@@ -49,6 +49,7 @@ const Modal: React.FC<ModalProps> = ({ show, onHide, title, children, size = 'md
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
             <button
+              type="button"
               onClick={onHide}
               className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
             >

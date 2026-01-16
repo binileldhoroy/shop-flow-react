@@ -1,35 +1,33 @@
 import React from 'react';
-import Modal from '../../common/Modal/Modal';
+import Modal from '../Modal/Modal';
 import { AlertTriangle } from 'lucide-react';
 
 interface DeleteConfirmModalProps {
-  show: boolean;
-  onHide: () => void;
-  onConfirm: () => void;
   title: string;
   message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
   loading?: boolean;
 }
 
 const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
-  show,
-  onHide,
-  onConfirm,
   title,
   message,
+  onConfirm,
+  onCancel,
   loading = false,
 }) => {
   return (
     <Modal
-      show={show}
-      onHide={onHide}
+      show={true}
+      onHide={onCancel}
       title={title}
       size="md"
       footer={
         <>
           <button
             className="btn btn-secondary"
-            onClick={onHide}
+            onClick={onCancel}
             disabled={loading}
           >
             Cancel

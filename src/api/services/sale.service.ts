@@ -18,10 +18,19 @@ export interface SaleFormData {
   }>;
 }
 
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 export const saleService = {
-  // Get all sales
-  getAll: async (): Promise<any[]> => {
-    const response = await axiosInstance.get(API_ENDPOINTS.SALES.LIST);
+  // Get sales with server-side pagination
+  getAll: async (page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<any>> => {
+    const response = await axiosInstance.get(
+      `${API_ENDPOINTS.SALES.LIST}?page=${page}&page_size=${pageSize}`
+    );
     return response.data;
   },
 
