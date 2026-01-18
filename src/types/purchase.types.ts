@@ -22,6 +22,8 @@ export interface PurchaseOrder {
   supplier: number;
   supplier_name?: string; // Optional, populated by serializer
   status: PurchaseStatus;
+  payment_status: 'paid' | 'pending' | 'partial';
+  payment_method: 'cash' | 'card' | 'upi' | 'net_banking' | 'other';
   subtotal: number;
   tax_amount: number;
   total_amount: number;
@@ -37,6 +39,8 @@ export interface PurchaseOrderCreate {
   order_date: string;
   expected_delivery_date?: string;
   status: PurchaseStatus;
+  payment_status: 'paid' | 'pending' | 'partial';
+  payment_method: 'cash' | 'card' | 'upi' | 'net_banking' | 'other';
   notes?: string;
   items: {
     product: number | null;

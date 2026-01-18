@@ -37,12 +37,16 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
     order_date: string;
     expected_delivery_date: string;
     status: PurchaseStatus;
+    payment_status: 'paid' | 'pending' | 'partial';
+    payment_method: 'cash' | 'card' | 'upi' | 'net_banking' | 'other';
     notes: string;
   }>({
     supplier: '',
     order_date: new Date().toISOString().split('T')[0],
     expected_delivery_date: '',
     status: 'draft',
+    payment_status: 'pending',
+    payment_method: 'cash',
     notes: '',
   });
 
@@ -55,6 +59,8 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
         order_date: purchase.order_date,
         expected_delivery_date: purchase.expected_delivery_date || '',
         status: purchase.status,
+        payment_status: purchase.payment_status || 'pending',
+        payment_method: purchase.payment_method || 'cash',
         notes: purchase.notes || '',
       });
       setItems(purchase.items.map(item => ({
@@ -75,6 +81,8 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
       order_date: new Date().toISOString().split('T')[0],
       expected_delivery_date: '',
       status: 'draft',
+      payment_status: 'pending',
+      payment_method: 'cash',
       notes: '',
     });
     setItems([{
@@ -144,6 +152,8 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
       order_date: formData.order_date,
       expected_delivery_date: formData.expected_delivery_date || undefined,
       status: formData.status,
+      payment_status: formData.payment_status,
+      payment_method: formData.payment_method,
       notes: formData.notes,
       items: items.map(item => ({
         product: Number(item.product) || null,
@@ -209,13 +219,30 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
             />
           </div>
           <div>
-            <label className="label">Expected Delivery</label>
-            <input
-              type="date"
+            <label className="label">Payment Status</label>
+            <select
               className="input-field"
-              value={formData.expected_delivery_date}
-              onChange={(e) => setFormData(p => ({ ...p, expected_delivery_date: e.target.value }))}
-            />
+              value={formData.payment_status}
+              onChange={(e) => setFormData(p => ({ ...p, payment_status: e.target.value as any }))}
+            >
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="partial">Partial</option>
+            </select>
+          </div>
+          <div>
+             <label className="label">Payment Method</label>
+             <select
+               className="input-field"
+               value={formData.payment_method}
+               onChange={(e) => setFormData(p => ({ ...p, payment_method: e.target.value as any }))}
+             >
+               <option value="cash">Cash</option>
+               <option value="card">Card</option>
+               <option value="upi">UPI</option>
+               <option value="net_banking">Net Banking</option>
+               <option value="other">Other</option>
+             </select>
           </div>
           <div>
              <label className="label">Status *</label>
@@ -228,7 +255,6 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                <option value="draft">Draft</option>
                <option value="ordered">Ordered</option>
                <option value="cancelled">Cancelled</option>
-               {/* Received status should be set via the 'Receive' action to ensure stock updates */}
              </select>
           </div>
         </div>
