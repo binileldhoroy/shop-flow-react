@@ -95,18 +95,91 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
     });
   };
 
-  const cgstPercent =
-    saleOrder.cgst_amount > 0
-      ? calculateGSTPercentage(saleOrder.cgst_amount, saleOrder.subtotal)
-      : '0.00';
-  const sgstPercent =
-    saleOrder.sgst_amount > 0
-      ? calculateGSTPercentage(saleOrder.sgst_amount, saleOrder.subtotal)
-      : '0.00';
-  const igstPercent =
-    saleOrder.igst_amount > 0
-      ? calculateGSTPercentage(saleOrder.igst_amount, saleOrder.subtotal)
-      : '0.00';
+  // Calculate taxes dynamically based on preview state
+  const taxDetails = React.useMemo(() => {
+    if (!currentCompany || !saleOrder) return {
+      cgst: 0, sgst: 0, igst: 0,
+      cgstRate: 0, sgstRate: 0, igstRate: 0,
+      isInterstate: false
+    };
+
+    // Determine state for tax calculation
+    // Use customerDetails.state if available (from preview)
+    // Fallback to saleOrder.billing_state
+    // Fallback to saleOrder.items[0]?.igst_rate > 0 (heuristic from existing data)
+
+    const companyState = currentCompany.state_name || '';
+    const customerState = customerDetails?.state || saleOrder.place_of_supply || '';
+
+    // Check if interstate
+    // If we have explicit states, compare them match case-insensitive
+    // If not, fall back to existing sale order distribution
+    let isInterstate = false;
+
+    if (companyState && customerState) {
+      isInterstate = companyState.toLowerCase() !== customerState.toLowerCase();
+    } else {
+      // Fallback to existing data structure if we can't determine from names
+      isInterstate = saleOrder.igst_amount > 0;
+    }
+
+    // Recalculate totals based on the sale order items
+    // We need to assume the unit prices (excluding tax) stay constant
+    // but the tax buckets change
+
+    let totalCGST = 0;
+    let totalSGST = 0;
+    let totalIGST = 0;
+
+    // Get representative rates from first item or default
+    let cgstRate = 0;
+    let sgstRate = 0;
+    let igstRate = 0;
+
+    if (saleOrder.items && saleOrder.items.length > 0) {
+      const firstItem = saleOrder.items[0];
+      // Base GST rate is consistent regardless of tax type
+      // If it was IGST, rate is igst_rate. If CGST/SGST, total is cgst+sgst
+      const baseGstRate = Number(firstItem.gst_rate) ||
+                          (Number(firstItem.cgst_rate) + Number(firstItem.sgst_rate)) ||
+                          Number(firstItem.igst_rate);
+
+      if (isInterstate) {
+        igstRate = baseGstRate;
+      } else {
+        cgstRate = baseGstRate / 2;
+        sgstRate = baseGstRate / 2;
+      }
+
+      // Calculate amounts
+      saleOrder.items.forEach(item => {
+        const lineTotal = Number(item.line_total); // This is taxable value
+        const itemGstRate = Number(item.gst_rate) || 0;
+
+        if (isInterstate) {
+           totalIGST += (lineTotal * itemGstRate) / 100;
+        } else {
+           totalCGST += (lineTotal * (itemGstRate / 2)) / 100;
+           totalSGST += (lineTotal * (itemGstRate / 2)) / 100;
+        }
+      });
+    }
+
+    return {
+      cgst: totalCGST,
+      sgst: totalSGST,
+      igst: totalIGST,
+      cgstRate: calculateGSTPercentage(totalCGST, saleOrder.subtotal),
+      sgstRate: calculateGSTPercentage(totalSGST, saleOrder.subtotal),
+      igstRate: calculateGSTPercentage(totalIGST, saleOrder.subtotal),
+      isInterstate
+    };
+  }, [saleOrder, customerDetails?.state, currentCompany]);
+
+  // Derived values for display
+  const cgstPercent = taxDetails.cgstRate;
+  const sgstPercent = taxDetails.sgstRate;
+  const igstPercent = taxDetails.igstRate;
 
   return (
     <div
@@ -303,13 +376,13 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             </tr>
 
             {/* GST Breakdown */}
-            {saleOrder.igst_amount > 0 ? (
+            {taxDetails.isInterstate ? (
               <tr style={{ borderBottom: '1px solid black' }}>
                 <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                   IGST @ {igstPercent}%:
                 </td>
                 <td style={{ padding: '8px', textAlign: 'right' }}>
-                  ₹{Number(saleOrder.igst_amount).toFixed(2)}
+                  ₹{Number(taxDetails.igst).toFixed(2)}
                 </td>
               </tr>
             ) : (
@@ -319,7 +392,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
                     CGST @ {cgstPercent}%:
                   </td>
                   <td style={{ padding: '8px', textAlign: 'right' }}>
-                    ₹{Number(saleOrder.cgst_amount).toFixed(2)}
+                    ₹{Number(taxDetails.cgst).toFixed(2)}
                   </td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid black' }}>
@@ -327,7 +400,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
                     SGST @ {sgstPercent}%:
                   </td>
                   <td style={{ padding: '8px', textAlign: 'right' }}>
-                    ₹{Number(saleOrder.sgst_amount).toFixed(2)}
+                    ₹{Number(taxDetails.sgst).toFixed(2)}
                   </td>
                 </tr>
               </>

@@ -5,15 +5,18 @@ import { useReactToPrint } from 'react-to-print';
 import { invoiceService } from '../../api/services/invoice.service';
 import { saleService } from '../../api/services/sale.service';
 import { customerService } from '../../api/services/customer.service';
+import { stateService } from '../../api/services/state.service';
 import { TaxInvoice, TaxInvoiceCreate } from '../../types/invoice.types';
 import { SaleOrder } from '../../types/sale.types';
 import { Customer } from '../../types/customer.types';
+import { StateMaster } from '../../types/state.types';
 import InvoiceTemplate from '../../components/invoices/InvoiceTemplate';
 
 const Invoices: React.FC = () => {
   const [invoices, setInvoices] = useState<TaxInvoice[]>([]);
   const [sales, setSales] = useState<SaleOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [states, setStates] = useState<StateMaster[]>([]);
   const [searchingCustomers, setSearchingCustomers] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +49,7 @@ const Invoices: React.FC = () => {
     customer_gstin: '',
     customer_address: '',
     customer_city: '',
+    customer_state: undefined,
     customer_pincode: '',
     customer_phone: '',
     customer_email: '',
@@ -59,7 +63,9 @@ const Invoices: React.FC = () => {
   // Fetch data on mount and when page/search changes
   useEffect(() => {
     fetchInvoices();
+    fetchStates();
   }, [currentPage, searchQuery]);
+
 
   useEffect(() => {
     if (showCreateModal && currentStep === 1) {
@@ -149,6 +155,15 @@ const Invoices: React.FC = () => {
     }
   };
 
+  const fetchStates = async () => {
+    try {
+      const data = await stateService.getAll();
+      setStates(data);
+    } catch (error) {
+      console.error('Error fetching states:', error);
+    }
+  };
+
   // Print handler
   const handlePrint = useReactToPrint({
     contentRef: invoiceRef,
@@ -175,6 +190,7 @@ const Invoices: React.FC = () => {
       customer_gstin: '',
       customer_address: '',
       customer_city: '',
+      customer_state: undefined,
       customer_pincode: '',
       customer_phone: '',
       customer_email: '',
@@ -191,6 +207,7 @@ const Invoices: React.FC = () => {
         customer_gstin: '',
         customer_address: '',
         customer_city: '',
+        customer_state: undefined,
         customer_pincode: '',
         customer_phone: '',
         customer_email: '',
@@ -204,11 +221,20 @@ const Invoices: React.FC = () => {
     const customer = customers.find((c) => c.id === customerId);
     if (customer) {
       setSelectedCustomer(customerId);
+
+      // Match customer state string to state ID if possible
+      let matchedStateId: number | undefined;
+      if (customer.state) {
+        const matchedState = states.find(s => s.name.toLowerCase() === customer.state?.toLowerCase());
+        if (matchedState) matchedStateId = matchedState.id;
+      }
+
       setCustomerDetails({
         customer_name: customer.name,
         customer_gstin: customer.gstin || '',
         customer_address: customer.billing_address_line1 || customer.address_line1 || '',
         customer_city: customer.billing_city || customer.city || '',
+        customer_state: matchedStateId,
         customer_pincode: customer.billing_pincode || customer.pincode || '',
         customer_phone: customer.phone || '',
         customer_email: customer.email || '',
@@ -244,6 +270,10 @@ const Invoices: React.FC = () => {
 
     if (customerDetails.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerDetails.customer_email)) {
       newErrors.customer_email = 'Invalid email address';
+    }
+
+    if (customerDetails.customer_gstin && !customerDetails.customer_state) {
+      newErrors.customer_state = 'State is required when GSTIN is provided';
     }
 
     setErrors(newErrors);
@@ -282,6 +312,9 @@ const Invoices: React.FC = () => {
       }
       if (customerDetails.customer_email?.trim()) {
         invoiceData.customer_email = customerDetails.customer_email.trim();
+      }
+      if (customerDetails.customer_state) {
+        invoiceData.customer_state = Number(customerDetails.customer_state);
       }
 
       await invoiceService.createInvoice(invoiceData);
@@ -693,6 +726,25 @@ const Invoices: React.FC = () => {
                     </div>
 
                     <div>
+                      <label className="label">State</label>
+                      <select
+                        className={`input-field ${errors.customer_state ? 'input-error' : ''}`}
+                        value={customerDetails.customer_state || ''}
+                        onChange={(e) => handleCustomerDetailChange('customer_state', e.target.value ? parseInt(e.target.value) : undefined as any)}
+                      >
+                        <option value="">Select State</option>
+                        {states.map(state => (
+                          <option key={state.id} value={state.id}>
+                            {state.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.customer_state && (
+                        <p className="text-sm text-red-600 mt-1">{errors.customer_state}</p>
+                      )}
+                    </div>
+
+                    <div>
                       <label className="label">Pincode</label>
                       <input
                         type="text"
@@ -751,6 +803,7 @@ const Invoices: React.FC = () => {
                         gstin: customerDetails.customer_gstin,
                         address: customerDetails.customer_address,
                         city: customerDetails.customer_city,
+                        state: states.find(s => s.id === customerDetails.customer_state)?.name,
                         pincode: customerDetails.customer_pincode,
                         phone: customerDetails.customer_phone,
                         email: customerDetails.customer_email,
