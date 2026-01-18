@@ -24,11 +24,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     sku: '',
     barcode: '',
     category: 0,
-    unit_price: 0,
-    selling_price: 0,
-    stock_quantity: 0,
-    reorder_level: 0,
+    hsn_code: '',
+    unit: 'piece',
+    cost_price: '' as any,
+    selling_price: '' as any,
+    gst_rate: '18',
+    tax_included: false,
+    stock_quantity: '' as any,
+    reorder_level: '' as any,
     description: '',
+    image: null,
     is_active: true,
   });
 
@@ -39,11 +44,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         sku: product.sku || '',
         barcode: product.barcode || '',
         category: product.category || 0,
-        unit_price: product.unit_price || 0,
-        selling_price: product.selling_price || product.unit_price || 0,
+        hsn_code: product.hsn_code || '',
+        unit: product.unit || 'piece',
+        cost_price: product.cost_price || 0,
+        selling_price: product.selling_price || 0,
+        gst_rate: product.gst_rate || '18',
+        tax_included: product.tax_included || false,
         stock_quantity: product.stock_quantity || 0,
         reorder_level: product.reorder_level || 0,
         description: product.description || '',
+        image: null,
         is_active: product.is_active ?? true,
       });
     } else {
@@ -52,11 +62,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         sku: '',
         barcode: '',
         category: 0,
-        unit_price: 0,
-        selling_price: 0,
-        stock_quantity: 0,
-        reorder_level: 0,
+        hsn_code: '',
+        unit: 'piece',
+        cost_price: '' as any,
+        selling_price: '' as any,
+        gst_rate: '18',
+        tax_included: false,
+        stock_quantity: '' as any,
+        reorder_level: '' as any,
         description: '',
+        image: null,
         is_active: true,
       });
     }
@@ -64,7 +79,18 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Convert empty strings to 0 for number fields before submitting
+    const submitData = {
+      ...formData,
+      cost_price: formData.cost_price === '' ? 0 : Number(formData.cost_price),
+      selling_price: formData.selling_price === '' ? 0 : Number(formData.selling_price),
+      gst_rate: formData.gst_rate === '' ? 0 : Number(formData.gst_rate),
+      stock_quantity: formData.stock_quantity === '' ? 0 : Number(formData.stock_quantity),
+      reorder_level: formData.reorder_level === '' ? 0 : Number(formData.reorder_level),
+    };
+
+    onSubmit(submitData);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -74,7 +100,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
       [name]: type === 'checkbox'
         ? (e.target as HTMLInputElement).checked
         : type === 'number'
-        ? parseFloat(value) || 0
+        ? value === '' ? '' : parseFloat(value)
         : value,
     }));
   };
@@ -102,6 +128,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Row 1: Product Name | Category */}
           <div>
             <label className="label">Product Name *</label>
             <input
@@ -130,6 +157,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Row 2: SKU | Barcode */}
           <div>
             <label className="label">SKU *</label>
             <input
@@ -151,14 +180,50 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               onChange={handleChange}
             />
           </div>
+
+          {/* Row 2.5: HSN Code | Unit */}
           <div>
-            <label className="label">Unit Price *</label>
+            <label className="label">HSN Code</label>
+            <input
+              type="text"
+              name="hsn_code"
+              className="input-field"
+              value={formData.hsn_code}
+              onChange={handleChange}
+              placeholder="Enter HSN code"
+              maxLength={8}
+            />
+          </div>
+          <div>
+            <label className="label">Unit *</label>
+            <select
+              name="unit"
+              className="input-field"
+              value={formData.unit}
+              onChange={handleChange}
+              required
+            >
+              <option value="piece">Piece</option>
+              <option value="kg">Kilogram</option>
+              <option value="gram">Gram</option>
+              <option value="liter">Liter</option>
+              <option value="ml">Milliliter</option>
+              <option value="dozen">Dozen</option>
+              <option value="pack">Pack</option>
+              <option value="box">Box</option>
+            </select>
+          </div>
+
+          {/* Row 3: Cost Price | Selling Price */}
+          <div>
+            <label className="label">Cost Price *</label>
             <input
               type="number"
-              name="unit_price"
+              name="cost_price"
               className="input-field"
-              value={formData.unit_price}
+              value={formData.cost_price}
               onChange={handleChange}
+              placeholder="Enter cost price"
               step="0.01"
               min="0"
               required
@@ -172,10 +237,29 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               className="input-field"
               value={formData.selling_price}
               onChange={handleChange}
+              placeholder="Enter selling price"
               step="0.01"
               min="0"
               required
             />
+          </div>
+
+          {/* Row 4: GST Rate | Stock Quantity */}
+          <div>
+            <label className="label">GST Rate (%) *</label>
+            <select
+              name="gst_rate"
+              className="input-field"
+              value={formData.gst_rate}
+              onChange={handleChange}
+              required
+            >
+              <option value="0">0%</option>
+              <option value="5">5%</option>
+              <option value="12">12%</option>
+              <option value="18">18%</option>
+              <option value="28">28%</option>
+            </select>
           </div>
           <div>
             <label className="label">Stock Quantity *</label>
@@ -185,6 +269,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               className="input-field"
               value={formData.stock_quantity}
               onChange={handleChange}
+              placeholder="Enter stock quantity"
               min="0"
               required
             />
@@ -197,6 +282,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               className="input-field"
               value={formData.reorder_level}
               onChange={handleChange}
+              placeholder="Enter reorder level"
               min="0"
               required
             />
@@ -211,6 +297,34 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
             rows={3}
             value={formData.description}
             onChange={handleChange}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="tax_included"
+            id="tax_included"
+            checked={formData.tax_included}
+            onChange={handleChange}
+            className="w-4 h-4 text-primary-600 rounded"
+          />
+          <label htmlFor="tax_included" className="text-sm text-gray-700">
+            Tax Included in Price
+          </label>
+        </div>
+
+        <div>
+          <label className="label">Product Image</label>
+          <input
+            type="file"
+            name="image"
+            className="input-field"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              setFormData(prev => ({ ...prev, image: file }));
+            }}
           />
         </div>
 

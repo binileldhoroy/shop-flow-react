@@ -4,8 +4,8 @@ import { Product, ProductFormData, Category, CategoryFormData } from '@types/pro
 
 export const productService = {
   // Products
-  getAll: async (): Promise<Product[]> => {
-    const response = await axiosInstance.get<Product[]>(API_ENDPOINTS.PRODUCTS.LIST);
+  getAll: async (params?: any): Promise<any> => {
+    const response = await axiosInstance.get(API_ENDPOINTS.PRODUCTS.LIST, { params });
     console.log(response.data);
     return response.data;
   },

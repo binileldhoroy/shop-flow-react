@@ -1,0 +1,48 @@
+export type PurchaseStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
+
+export interface PurchaseItem {
+  id?: number;
+  product: number | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  tax_rate: number;
+  // Read-only fields from backend
+  total_price?: number;
+  tax_amount?: number;
+  total_with_tax?: number;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  order_number: string;
+  order_date: string;
+  expected_delivery_date?: string | null;
+  received_date?: string | null;
+  supplier: number;
+  supplier_name?: string; // Optional, populated by serializer
+  status: PurchaseStatus;
+  subtotal: number;
+  tax_amount: number;
+  total_amount: number;
+  notes?: string;
+  items: PurchaseItem[];
+  created_by?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrderCreate {
+  supplier: number;
+  order_date: string;
+  expected_delivery_date?: string;
+  status: PurchaseStatus;
+  notes?: string;
+  items: {
+    product: number | null;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    tax_rate: number;
+  }[];
+}

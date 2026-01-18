@@ -1,0 +1,276 @@
+import React, { useState, useEffect } from 'react';
+import Modal from '../common/Modal/Modal';
+import { Supplier, SupplierFormData } from '../../types/supplier.types';
+
+interface SupplierFormModalProps {
+  show: boolean;
+  onHide: () => void;
+  onSubmit: (data: SupplierFormData) => void;
+  supplier: Supplier | null;
+  loading?: boolean;
+}
+
+const SupplierFormModal: React.FC<SupplierFormModalProps> = ({
+  show,
+  onHide,
+  onSubmit,
+  supplier,
+  loading = false,
+}) => {
+  const [formData, setFormData] = useState<SupplierFormData>({
+    name: '',
+    contact_person: '',
+    email: '',
+    phone: '',
+    alternate_phone: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    pincode: '',
+    gstin: '',
+    payment_terms: '',
+    is_active: true,
+    notes: '',
+  });
+
+  useEffect(() => {
+    if (supplier) {
+      setFormData({
+        name: supplier.name,
+        contact_person: supplier.contact_person || '',
+        email: supplier.email || '',
+        phone: supplier.phone,
+        alternate_phone: supplier.alternate_phone || '',
+        address_line1: supplier.address_line1,
+        address_line2: supplier.address_line2 || '',
+        city: supplier.city,
+        state: supplier.state,
+        pincode: supplier.pincode,
+        gstin: supplier.gstin || '',
+        payment_terms: supplier.payment_terms || '',
+        is_active: supplier.is_active,
+        notes: supplier.notes || '',
+      });
+    } else {
+      setFormData({
+        name: '',
+        contact_person: '',
+        email: '',
+        phone: '',
+        alternate_phone: '',
+        address_line1: '',
+        address_line2: '',
+        city: '',
+        state: '',
+        pincode: '',
+        gstin: '',
+        payment_terms: '',
+        is_active: true,
+        notes: '',
+      });
+    }
+  }, [supplier, show]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <Modal
+      show={show}
+      onHide={onHide}
+      title={supplier ? 'Edit Supplier' : 'Add Supplier'}
+      size="lg"
+      footer={
+        <>
+          <button className="btn btn-secondary" onClick={onHide} disabled={loading}>
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : 'Save Supplier'}
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Basic Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="label">Company Name *</label>
+            <input
+              type="text"
+              name="name"
+              className="input-field"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">Contact Person</label>
+            <input
+              type="text"
+              name="contact_person"
+              className="input-field"
+              value={formData.contact_person}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <label className="label">Phone *</label>
+            <input
+              type="text"
+              name="phone"
+              className="input-field"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <label className="label">Email</label>
+            <input
+              type="email"
+              name="email"
+              className="input-field"
+              value={formData.email}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+
+        {/* Address */}
+        <div>
+          <h4 className="font-semibold text-gray-700 mb-2">Address</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="md:col-span-2">
+                <label className="label">Address Line 1 *</label>
+                <input
+                  type="text"
+                  name="address_line1"
+                  className="input-field"
+                  value={formData.address_line1}
+                  onChange={handleChange}
+                  required
+                />
+             </div>
+             <div className="md:col-span-2">
+                <label className="label">Address Line 2</label>
+                <input
+                  type="text"
+                  name="address_line2"
+                  className="input-field"
+                  value={formData.address_line2}
+                  onChange={handleChange}
+                />
+             </div>
+             <div>
+                <label className="label">City *</label>
+                <input
+                  type="text"
+                  name="city"
+                  className="input-field"
+                  value={formData.city}
+                  onChange={handleChange}
+                  required
+                />
+             </div>
+             <div>
+                <label className="label">State *</label>
+                <input
+                  type="text"
+                  name="state"
+                  className="input-field"
+                  value={formData.state}
+                  onChange={handleChange}
+                  required
+                />
+             </div>
+             <div>
+                <label className="label">Pincode *</label>
+                <input
+                  type="text"
+                  name="pincode"
+                  className="input-field"
+                  value={formData.pincode}
+                  onChange={handleChange}
+                  required
+                />
+             </div>
+          </div>
+        </div>
+
+        {/* Business Details */}
+        <div>
+          <h4 className="font-semibold text-gray-700 mb-2">Business Details</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+                <label className="label">GSTIN</label>
+                <input
+                  type="text"
+                  name="gstin"
+                  className="input-field"
+                  value={formData.gstin}
+                  onChange={handleChange}
+                  placeholder="GST Identification Number"
+                />
+             </div>
+             <div>
+                <label className="label">Payment Terms</label>
+                <input
+                  type="text"
+                  name="payment_terms"
+                  className="input-field"
+                  value={formData.payment_terms}
+                  onChange={handleChange}
+                  placeholder="e.g. Net 30"
+                />
+             </div>
+          </div>
+        </div>
+
+        {/* Notes & Status */}
+        <div>
+          <label className="label">Notes</label>
+          <textarea
+            className="input-field"
+            name="notes"
+            rows={2}
+            value={formData.notes}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="is_active"
+            id="is_active"
+            checked={formData.is_active}
+            onChange={handleChange}
+            className="w-4 h-4 text-primary-600 rounded"
+          />
+          <label htmlFor="is_active" className="text-sm text-gray-700">
+            Active Supplier
+          </label>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+export default SupplierFormModal;

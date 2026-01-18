@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { productService, categoryService } from '@api/services/product.service';
 import { Product, Category, ProductFormData } from '../../types/product.types';
 import ProductFormModal from '@components/features/products/ProductFormModal';
@@ -23,18 +23,34 @@ const Products: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [productsData, categoriesData] = await Promise.all([
-        productService.getAll(),
+
+      // Build query params for API search
+      const params: any = {};
+      if (searchTerm) params.search = searchTerm;
+      if (categoryFilter) params.category = categoryFilter;
+
+      const [productsResponse, categoriesData] = await Promise.all([
+        productService.getAll(params),
         categoryService.getAll(),
       ]);
-      setProducts(productsData);
+      // Handle paginated response - extract results array
+      const productsData = productsResponse.results || productsResponse;
+      let filteredData = Array.isArray(productsData) ? productsData : [];
+
+      // Apply stock filter on frontend (since backend doesn't have this filter)
+      if (stockFilter) {
+        filteredData = filteredData.filter(product => {
+          if (stockFilter === 'low') return product.stock_quantity <= product.reorder_level && product.stock_quantity > 0;
+          if (stockFilter === 'out') return product.stock_quantity === 0;
+          if (stockFilter === 'in') return product.stock_quantity > 0;
+          return true;
+        });
+      }
+
+      setProducts(filteredData);
       setCategories(categoriesData);
     } catch (error: any) {
       dispatch(addNotification({
@@ -44,7 +60,17 @@ const Products: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, categoryFilter, stockFilter, dispatch]);
+
+  // Debounced search effect - also handles initial load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadData();
+    }, 300); // 300ms debounce (reduced from 500ms for faster response)
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, categoryFilter, stockFilter, loadData]);
+
 
   const handleAddProduct = () => {
     setSelectedProduct(null);
@@ -113,21 +139,6 @@ const Products: React.FC = () => {
     }
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.barcode?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesCategory = !categoryFilter || product.category.toString() === categoryFilter;
-
-    const matchesStock = !stockFilter ||
-                        (stockFilter === 'low' && product.stock_quantity <= product.reorder_level) ||
-                        (stockFilter === 'out' && product.stock_quantity === 0) ||
-                        (stockFilter === 'in' && product.stock_quantity > 0);
-
-    return matchesSearch && matchesCategory && matchesStock;
-  });
-
   const getCategoryName = (categoryId: number) => {
     const category = categories.find(c => c.id === categoryId);
     return category?.name || 'Unknown';
@@ -136,7 +147,7 @@ const Products: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-content-between items-center">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Package className="w-8 h-8" />
@@ -192,38 +203,42 @@ const Products: React.FC = () => {
         </div>
         <div className="md:col-span-3 flex items-center justify-end">
           <span className="text-gray-600">
-            {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+            {products.length} product{products.length !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
 
       {/* Products Table */}
-      <div className="card">
+      <div className="card" style={{ height: 'calc(100vh - 320px)', display: 'flex', flexDirection: 'column' }}>
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-12">
             <Inbox className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">No products found</p>
           </div>
         ) : (
-          <div className="table-container">
+          <div className="table-container" style={{ flex: 1, overflow: 'auto' }}>
             <table className="table">
               <thead>
                 <tr>
                   <th>SKU</th>
                   <th>Name</th>
                   <th>Category</th>
-                  <th>Price</th>
+                  <th>HSN Code</th>
+                  <th>Unit</th>
+                  <th>Cost Price</th>
+                  <th>Selling Price</th>
+                  <th>GST Rate</th>
                   <th>Stock</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map(product => (
+                {products.map((product: Product) => (
                   <tr key={product.id}>
                     <td>
                       <strong>{product.sku}</strong>
@@ -237,7 +252,17 @@ const Products: React.FC = () => {
                         {getCategoryName(product.category)}
                       </span>
                     </td>
-                    <td>₹{parseFloat(String(product.selling_price || product.unit_price || 0)).toFixed(2)}</td>
+                    <td>{product.hsn_code || '-'}</td>
+                    <td>
+                      <span className="text-gray-600 capitalize">{product.unit || 'piece'}</span>
+                    </td>
+                    <td>₹{parseFloat(String(product.cost_price || 0)).toFixed(2)}</td>
+                    <td>
+                      <strong>₹{parseFloat(String(product.selling_price || 0)).toFixed(2)}</strong>
+                    </td>
+                    <td>
+                      <span className="badge badge-info">{product.gst_rate || 0}%</span>
+                    </td>
                     <td>
                       <span className={`badge ${
                         product.stock_quantity === 0 ? 'badge-danger' :

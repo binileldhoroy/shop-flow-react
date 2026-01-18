@@ -53,7 +53,8 @@ const POS: React.FC = () => {
   React.useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const data = await productService.getAll();
+        const response = await productService.getAll();
+        const data = response.results || response;
         setProducts(data.filter((p: any) => p.stock_quantity > 0));
       } catch (error) {
         console.error('Error fetching products:', error);

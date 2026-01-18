@@ -8,9 +8,9 @@ import {
 } from '../../types/inventory.types';
 
 export const inventoryService = {
-  // Get all stock items
-  getStock: async (): Promise<StockItem[]> => {
-    const response = await axiosInstance.get<StockItem[]>(API_ENDPOINTS.INVENTORY.STOCK);
+  // Get all stock items with optional filters
+  getStock: async (params?: any): Promise<any> => {
+    const response = await axiosInstance.get(API_ENDPOINTS.INVENTORY.STOCK, { params });
     return response.data;
   },
 

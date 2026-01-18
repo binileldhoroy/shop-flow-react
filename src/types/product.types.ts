@@ -45,10 +45,16 @@ export interface ProductFormData {
   sku: string;
   barcode?: string;
   category: number;
-  unit_price: number;
-  cost_price?: number;
-  stock_quantity: number;
-  reorder_level: number;
+  hsn_code?: string;
+  unit?: string;
+  cost_price?: number | string;
+  unit_price?: number | string;  // Optional - not in backend
+  selling_price?: number | string;
+  gst_rate?: number | string;
+  tax_included?: boolean;
+  stock_quantity: number | string;
+  reorder_level: number | string;
+  image?: File | null;
   is_active?: boolean;
 }
 
