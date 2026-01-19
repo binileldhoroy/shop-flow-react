@@ -156,10 +156,10 @@ const Sidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                    `flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-all duration-200 group relative ${
                       isActive
-                        ? 'bg-primary-600 text-white shadow-md'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-primary-600 text-dark font-semibold shadow-md'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
                     } ${!sidebarOpen && 'lg:justify-center'}`
                   }
                 >
