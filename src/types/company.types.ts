@@ -24,6 +24,8 @@ export interface Company {
   is_active: boolean;
   created_by: number;
   created_by_username?: string;
+  admin_username?: string;
+
   created_at: string;
   updated_at: string;
 }

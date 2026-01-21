@@ -14,6 +14,7 @@ import Layout from './components/layout/Layout/Layout';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Companies from './pages/Companies/Companies';
+import CompanyDetails from './pages/Companies/CompanyDetails';
 import Products from './pages/Products/Products';
 import Categories from './pages/Categories/Categories';
 import POS from './pages/POS/POS';
@@ -65,11 +66,22 @@ function App() {
             }
           />
 
+          <Route
+            path="/companies/:id"
+            element={
+              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER]}>
+                <Layout>
+                  <CompanyDetails />
+                </Layout>
+              </RoleBasedRoute>
+            }
+          />
+
           {/* POS route */}
           <Route
             path="/pos"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
                 <Layout>
                   <POS />
                 </Layout>
@@ -81,7 +93,7 @@ function App() {
           <Route
             path="/products"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
                 <Layout>
                   <Products />
                 </Layout>
@@ -92,7 +104,7 @@ function App() {
           <Route
             path="/categories"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
                 <Layout>
                   <Categories />
                 </Layout>
@@ -103,7 +115,7 @@ function App() {
           <Route
             path="/inventory"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
                 <Layout>
                   <Inventory />
                 </Layout>
@@ -115,7 +127,7 @@ function App() {
           <Route
             path="/sales"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
                 <Layout>
                   <Sales />
                 </Layout>
@@ -126,7 +138,7 @@ function App() {
           <Route
             path="/customers"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
                 <Layout>
                   <Customers />
                 </Layout>
@@ -137,7 +149,7 @@ function App() {
           <Route
             path="/invoices"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER]}>
                 <Layout>
                   <Invoices />
                 </Layout>
@@ -149,7 +161,7 @@ function App() {
           <Route
             path="/purchases"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
                 <Layout>
                   <Purchases />
                 </Layout>
@@ -160,7 +172,7 @@ function App() {
           <Route
             path="/suppliers"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.INVENTORY_STAFF]}>
                 <Layout>
                   <Suppliers />
                 </Layout>
@@ -172,7 +184,7 @@ function App() {
           <Route
             path="/payments"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER]}>
                 <Layout>
                   <Payments />
                 </Layout>
@@ -183,7 +195,7 @@ function App() {
           <Route
             path="/reports"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER]}>
                 <Layout>
                   <Reports />
                 </Layout>
@@ -194,7 +206,7 @@ function App() {
           <Route
             path="/users"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER]}>
                 <Layout>
                   <Users />
                 </Layout>
@@ -205,7 +217,7 @@ function App() {
           <Route
             path="/settings"
             element={
-              <RoleBasedRoute allowedRoles={[UserRole.SUPER_USER, UserRole.ADMIN]}>
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN]}>
                 <Layout>
                   <Settings />
                 </Layout>

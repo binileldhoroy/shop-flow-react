@@ -45,15 +45,20 @@ const Companies: React.FC = () => {
       const formData = new FormData();
       formData.append('is_active', (!company.is_active).toString());
 
-      await companyService.update(company.id, formData);
+      await companyService.update(company.id, formData as any);
       dispatch(addNotification({
         message: `Company ${company.is_active ? 'deactivated' : 'activated'} successfully`,
         type: 'success',
       }));
       dispatch(fetchAllCompanies());
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message
+        || error.response?.data?.error
+        || error.message
+        || 'Failed to update company status';
+
       dispatch(addNotification({
-        message: error.response?.data?.message || 'Failed to update company status',
+        message: errorMessage,
         type: 'error',
       }));
     }
@@ -65,7 +70,7 @@ const Companies: React.FC = () => {
 
       if (selectedCompany) {
         // Update
-        await companyService.update(selectedCompany.id, data);
+        await companyService.update(selectedCompany.id, data as any);
         dispatch(addNotification({
           message: 'Company updated successfully',
           type: 'success',
@@ -73,7 +78,7 @@ const Companies: React.FC = () => {
       } else {
         // Create
         console.log('Creating new company...');
-        await companyService.create(data);
+        await companyService.create(data as any);
         dispatch(addNotification({
           message: 'Company created successfully',
           type: 'success',
@@ -105,7 +110,7 @@ const Companies: React.FC = () => {
 
     try {
       setFormLoading(true);
-      await companyService.delete(selectedCompany.id);
+      await companyService.deactivate(selectedCompany.id);
       dispatch(addNotification({
         message: 'Company deleted successfully',
         type: 'success',
@@ -113,8 +118,13 @@ const Companies: React.FC = () => {
       setShowDeleteModal(false);
       dispatch(fetchAllCompanies());
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message
+        || error.response?.data?.error
+        || error.message
+        || 'Failed to delete company';
+
       dispatch(addNotification({
-        message: error.response?.data?.message || 'Failed to delete company',
+        message: errorMessage,
         type: 'error',
       }));
     } finally {
@@ -233,6 +243,16 @@ const Companies: React.FC = () => {
                   <MapPin className="w-4 h-4" />
                   {company.city}, {company.state}
                 </p>
+
+              </div>
+
+              <div className="flex gap-2 mb-3">
+                 <button
+                   className="btn btn-outline-secondary text-sm w-full"
+                   onClick={() => window.location.href = `/companies/${company.id}`}
+                 >
+                   View Details
+                 </button>
               </div>
 
               <div className="flex gap-2">

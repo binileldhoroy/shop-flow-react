@@ -61,10 +61,10 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({
         company_name: company.company_name || '',
         email: company.email || '',
         phone: company.phone || '',
-        address: company.address || '',
+        address: '', // Address not directly on company object anymore, use lines
         address_line1: company.address_line1 || '',
         city: company.city || '',
-        state: company.state || '',
+        state: company.state_name || '', // Use state_name for display
         pincode: company.pincode || '',
         gstin: company.gstin || '',
         pan: company.pan || '',
@@ -73,8 +73,8 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({
         ifsc_code: company.ifsc_code || '',
         account_number: company.account_number || '',
         authorized_signatory_name: company.authorized_signatory_name || '',
-        username: '', // Not needed for edit
-        password: '', // Not needed for edit
+        username: company.admin_username || '', // Display existing admin username
+        password: '', // Empty password for edit mode (only if changing)
         is_active: company.is_active ?? true,
       });
     } else {
@@ -112,9 +112,10 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({
     // Add all fields except username/password and state
     Object.entries(formData).forEach(([key, value]) => {
       // Skip username and password for editing, only include for new companies
-      if (company && (key === 'username' || key === 'password')) {
-        return;
-      }
+      // Include username for all cases (so it can be sent if needed, though backend ignores on edit mostly unless we change it)
+      // Actually backend doesn't use username on edit unless creating new user fallback.
+      if (key === 'username') data.append(key, value.toString());
+      if (key === 'password' && value) data.append(key, value.toString());
 
       // Skip state here, we'll add it separately with the ID
       if (key === 'state') {
@@ -219,41 +220,41 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({
           </div>
         </div>
 
-        {!company && (
-          <>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <h4 className="font-semibold text-blue-900 mb-2">Admin User Credentials</h4>
-              <p className="text-sm text-blue-700">Create login credentials for the company administrator</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Username *</label>
-                <input
-                  type="text"
-                  name="username"
-                  className="input-field"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required={!company}
-                  placeholder="Admin username"
-                />
-              </div>
-              <div>
-                <label className="label">Password *</label>
-                <input
-                  type="password"
-                  name="password"
-                  className="input-field"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required={!company}
-                  placeholder="Admin password"
-                  minLength={6}
-                />
-              </div>
-            </div>
-          </>
-        )}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <h4 className="font-semibold text-blue-900 mb-2">Admin User Credentials</h4>
+          <p className="text-sm text-blue-700">
+            {company ? 'Update password for company administrator' : 'Create login credentials for the company administrator'}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="label">Username {company ? '(Read Only)' : '*'}</label>
+            <input
+              type="text"
+              name="username"
+              className="input-field bg-gray-50"
+              value={formData.username}
+              onChange={handleChange}
+              required={!company || !company.admin_username}
+              readOnly={!!company && !!company.admin_username}
+              disabled={!!company && !!company.admin_username}
+              placeholder={company && !company.admin_username ? "Create admin username" : "Admin username"}
+            />
+          </div>
+          <div>
+            <label className="label">{company ? 'New Password' : 'Password *'}</label>
+            <input
+              type="password"
+              name="password"
+              className="input-field"
+              value={formData.password}
+              onChange={handleChange}
+              required={!company}
+              placeholder={company ? "Leave empty to keep current" : "Admin password"}
+              minLength={6}
+            />
+          </div>
+        </div>
 
         {/* Address Section */}
         <div className="border-t pt-4 mt-4">
