@@ -55,6 +55,7 @@ export const API_ENDPOINTS = {
     LIST: '/api/sales/',
     DETAIL: (id: number) => `/api/sales/${id}/`,
     DAILY_REPORT: '/api/sales/daily-report/',
+    TREND: '/api/sales/trend/',
     INVOICES: '/api/sales/invoices/',
     INVOICE_DETAIL: (id: number) => `/api/sales/invoices/${id}/`,
   },
