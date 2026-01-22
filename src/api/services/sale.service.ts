@@ -27,10 +27,14 @@ export interface PaginatedResponse<T> {
 
 export const saleService = {
   // Get all sales with pagination
-  getAll: async (page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<any>> => {
-    const response = await axiosInstance.get<PaginatedResponse<any>>(
-      `${API_ENDPOINTS.SALES.LIST}?page=${page}&page_size=${pageSize}`
-    );
+  // Get all sales with pagination and filters
+  getAll: async (page: number = 1, pageSize: number = 10, filters?: { startDate?: string; endDate?: string; paymentMethod?: string }): Promise<PaginatedResponse<any>> => {
+    let url = `${API_ENDPOINTS.SALES.LIST}?page=${page}&page_size=${pageSize}`;
+    if (filters?.startDate) url += `&start_date=${filters.startDate}`;
+    if (filters?.endDate) url += `&end_date=${filters.endDate}`;
+    if (filters?.paymentMethod) url += `&payment_method=${filters.paymentMethod}`;
+
+    const response = await axiosInstance.get<PaginatedResponse<any>>(url);
     return response.data;
   },
 

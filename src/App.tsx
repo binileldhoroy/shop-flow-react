@@ -18,6 +18,7 @@ import CompanyDetails from './pages/Companies/CompanyDetails';
 import Products from './pages/Products/Products';
 import Categories from './pages/Categories/Categories';
 import POS from './pages/POS/POS';
+import QuickSale from './pages/QuickSale/QuickSale';
 import Sales from './pages/Sales/Sales';
 import Customers from './pages/Customers/Customers';
 import Inventory from './pages/Inventory/Inventory';
@@ -84,6 +85,17 @@ function App() {
               <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
                 <Layout>
                   <POS />
+                </Layout>
+              </RoleBasedRoute>
+            }
+          />
+
+          <Route
+            path="/quick-sale"
+            element={
+              <RoleBasedRoute allowedRoles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER]}>
+                <Layout>
+                  <QuickSale />
                 </Layout>
               </RoleBasedRoute>
             }

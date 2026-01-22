@@ -3,7 +3,7 @@ import { useAppDispatch } from '@hooks/useRedux';
 import { saleService } from '@api/services/sale.service';
 import { addNotification } from '@store/slices/uiSlice';
 import { Calendar, Eye, Download, X, Printer, ShoppingCart, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 
 interface Sale {
   id: number;
@@ -37,8 +37,9 @@ const Sales: React.FC = () => {
   const dispatch = useAppDispatch();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -50,7 +51,7 @@ const Sales: React.FC = () => {
 
   useEffect(() => {
     fetchSales();
-  }, [currentPage, pageSize, startDate, endDate]);
+  }, [currentPage, pageSize, startDate, endDate, paymentMethod]);
 
   useEffect(() => {
     if (selectedSaleId) {
@@ -61,7 +62,11 @@ const Sales: React.FC = () => {
   const fetchSales = async () => {
     try {
       setLoading(true);
-      const response = await saleService.getAll(currentPage, pageSize);
+      const response = await saleService.getAll(currentPage, pageSize, {
+        startDate,
+        endDate,
+        paymentMethod
+      });
       setSales(response.results);
       setTotalCount(response.count);
     } catch (error) {
@@ -199,7 +204,7 @@ const Sales: React.FC = () => {
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [startDate, endDate, pageSize]);
+  }, [startDate, endDate, paymentMethod, pageSize]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -294,15 +299,30 @@ const Sales: React.FC = () => {
               className="input-field"
             />
           </div>
+          <div className="flex-1">
+             <label className="label">Payment Method</label>
+             <select
+               value={paymentMethod}
+               onChange={(e) => setPaymentMethod(e.target.value)}
+               className="input-field"
+             >
+               <option value="">All Methods</option>
+               <option value="cash">Cash</option>
+               <option value="card">Card</option>
+               <option value="upi">UPI</option>
+               <option value="net_banking">Net Banking</option>
+             </select>
+          </div>
           <div className="flex items-end">
             <button
               onClick={() => {
-                setStartDate('');
-                setEndDate('');
+                setStartDate(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+                setEndDate(format(new Date(), 'yyyy-MM-dd'));
+                setPaymentMethod('');
               }}
               className="btn btn-secondary"
             >
-              Clear Filters
+              Reset Filters
             </button>
           </div>
         </div>
@@ -328,6 +348,7 @@ const Sales: React.FC = () => {
                   <th className="text-left py-3 px-4 font-medium text-gray-700">Order #</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">Date</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-700">Customer</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-700">Payment</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-700">Subtotal</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-700">GST</th>
                   <th className="text-right py-3 px-4 font-medium text-gray-700">Total</th>
@@ -343,6 +364,7 @@ const Sales: React.FC = () => {
                       {format(new Date(sale.sale_date), 'MMM dd, yyyy')}
                     </td>
                     <td className="py-3 px-4 text-gray-600">{sale.customer_name || 'Guest'}</td>
+                    <td className="py-3 px-4 text-gray-600 capitalize">{sale.payment_method?.replace('_', ' ') || '-'}</td>
                     <td className="py-3 px-4 text-right text-gray-900">₹{sale.subtotal}</td>
                     <td className="py-3 px-4 text-right text-gray-600">₹{sale.gst_amount}</td>
                     <td className="py-3 px-4 text-right font-medium text-gray-900">

@@ -19,6 +19,7 @@ import {
   TrendingUp,
   UserCog,
   Settings,
+  Zap,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ElementType> = {
@@ -37,6 +38,7 @@ const iconMap: Record<string, React.ElementType> = {
   'graph-up': TrendingUp,
   'person-badge': UserCog,
   gear: Settings,
+  zap: Zap,
 };
 
 const Sidebar: React.FC = () => {
@@ -60,6 +62,12 @@ const Sidebar: React.FC = () => {
       path: '/pos',
       icon: 'calculator',
       label: 'POS',
+      roles: [UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
+    },
+    {
+      path: '/quick-sale',
+      icon: 'zap',
+      label: 'Quick Sale',
       roles: [UserRole.SUPER_USER, UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER],
     },
     {
