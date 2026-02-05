@@ -1,6 +1,6 @@
 import axiosInstance from '../axios';
 import { API_ENDPOINTS } from '../endpoints';
-import { LoginCredentials, AuthResponse, User } from '@types/auth.types';
+import { LoginCredentials, AuthResponse, User } from '../../types/auth.types';
 
 export const authService = {
   // Login
@@ -31,6 +31,12 @@ export const authService = {
   // Get user profile
   getProfile: async (): Promise<User> => {
     const response = await axiosInstance.get<User>(API_ENDPOINTS.AUTH.PROFILE);
+    return response.data;
+  },
+
+  // Update user profile
+  updateProfile: async (data: Partial<User>): Promise<User> => {
+    const response = await axiosInstance.put<User>(API_ENDPOINTS.AUTH.PROFILE, data);
     return response.data;
   },
 

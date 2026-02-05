@@ -34,10 +34,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
     );
   }
 
-  const calculateGSTPercentage = (gstAmount: number, subtotal: number) => {
-    if (subtotal === 0) return '0.00';
-    return ((gstAmount / subtotal) * 100).toFixed(2);
-  };
+
 
   const numberToWords = (num: number): string => {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
@@ -98,88 +95,66 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
   // Calculate taxes dynamically based on preview state
   const taxDetails = React.useMemo(() => {
     if (!currentCompany || !saleOrder) return {
-      cgst: 0, sgst: 0, igst: 0,
-      cgstRate: 0, sgstRate: 0, igstRate: 0,
+      taxBreakdown: {},
+      exemptedAmount: 0,
+      totalGST: 0,
       isInterstate: false
     };
 
     // Determine state for tax calculation
-    // Use customerDetails.state if available (from preview)
-    // Fallback to saleOrder.billing_state
-    // Fallback to saleOrder.items[0]?.igst_rate > 0 (heuristic from existing data)
-
     const companyState = currentCompany.state_name || '';
     const customerState = customerDetails?.state || saleOrder.place_of_supply || '';
 
-    // Check if interstate
-    // If we have explicit states, compare them match case-insensitive
-    // If not, fall back to existing sale order distribution
     let isInterstate = false;
 
     if (companyState && customerState) {
       isInterstate = companyState.toLowerCase() !== customerState.toLowerCase();
     } else {
-      // Fallback to existing data structure if we can't determine from names
       isInterstate = saleOrder.igst_amount > 0;
     }
 
-    // Recalculate totals based on the sale order items
-    // We need to assume the unit prices (excluding tax) stay constant
-    // but the tax buckets change
-
-    let totalCGST = 0;
-    let totalSGST = 0;
-    let totalIGST = 0;
-
-    // Get representative rates from first item or default
-    let cgstRate = 0;
-    let sgstRate = 0;
-    let igstRate = 0;
+    const taxBreakdown: Record<number, { taxableAmount: number; cgst: number; sgst: number; igst: number }> = {};
+    let exemptedAmount = 0;
+    let totalGST = 0;
 
     if (saleOrder.items && saleOrder.items.length > 0) {
-      const firstItem = saleOrder.items[0];
-      // Base GST rate is consistent regardless of tax type
-      // If it was IGST, rate is igst_rate. If CGST/SGST, total is cgst+sgst
-      const baseGstRate = Number(firstItem.gst_rate) ||
-                          (Number(firstItem.cgst_rate) + Number(firstItem.sgst_rate)) ||
-                          Number(firstItem.igst_rate);
-
-      if (isInterstate) {
-        igstRate = baseGstRate;
-      } else {
-        cgstRate = baseGstRate / 2;
-        sgstRate = baseGstRate / 2;
-      }
-
-      // Calculate amounts
       saleOrder.items.forEach(item => {
-        const lineTotal = Number(item.line_total); // This is taxable value
-        const itemGstRate = Number(item.gst_rate) || 0;
+        const lineTotal = Number(item.line_total); // Taxable value
+        // Use the GST rate from the item. If strictly IGST was stored, we might need to be careful,
+        // but usually gst_rate holds the total tax percent.
+        const itemGstRate = Number(item.gst_rate) ||
+                            (Number(item.cgst_rate) + Number(item.sgst_rate)) ||
+                            Number(item.igst_rate) || 0;
 
-        if (isInterstate) {
-           totalIGST += (lineTotal * itemGstRate) / 100;
+        if (itemGstRate === 0) {
+          exemptedAmount += lineTotal;
         } else {
-           totalCGST += (lineTotal * (itemGstRate / 2)) / 100;
-           totalSGST += (lineTotal * (itemGstRate / 2)) / 100;
+          if (!taxBreakdown[itemGstRate]) {
+            taxBreakdown[itemGstRate] = { taxableAmount: 0, cgst: 0, sgst: 0, igst: 0 };
+          }
+
+          const taxAmount = (lineTotal * itemGstRate) / 100;
+          totalGST += taxAmount;
+
+          taxBreakdown[itemGstRate].taxableAmount += lineTotal;
+
+          if (isInterstate) {
+            taxBreakdown[itemGstRate].igst += taxAmount;
+          } else {
+            taxBreakdown[itemGstRate].cgst += taxAmount / 2;
+            taxBreakdown[itemGstRate].sgst += taxAmount / 2;
+          }
         }
       });
     }
 
     return {
-      cgst: totalCGST,
-      sgst: totalSGST,
-      igst: totalIGST,
-      cgstRate: calculateGSTPercentage(totalCGST, saleOrder.subtotal),
-      sgstRate: calculateGSTPercentage(totalSGST, saleOrder.subtotal),
-      igstRate: calculateGSTPercentage(totalIGST, saleOrder.subtotal),
+      taxBreakdown,
+      exemptedAmount,
+      totalGST,
       isInterstate
     };
   }, [saleOrder, customerDetails?.state, currentCompany]);
-
-  // Derived values for display
-  const cgstPercent = taxDetails.cgstRate;
-  const sgstPercent = taxDetails.sgstRate;
-  const igstPercent = taxDetails.igstRate;
 
   return (
     <div
@@ -315,6 +290,9 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
                 HSN/SAC
               </th>
               <th style={{ padding: '8px', textAlign: 'center', width: '60px', borderRight: '1px solid black' }}>
+                Tax
+              </th>
+              <th style={{ padding: '8px', textAlign: 'center', width: '60px', borderRight: '1px solid black' }}>
                 Qty
               </th>
               <th style={{ padding: '8px', textAlign: 'right', width: '100px', borderRight: '1px solid black' }}>
@@ -338,6 +316,9 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
                   {item.hsn_code || '-'}
                 </td>
                 <td style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid black' }}>
+                  {item.gst_rate}%
+                </td>
+                <td style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid black' }}>
                   {item.quantity}
                 </td>
                 <td style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
@@ -358,6 +339,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
                   <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
                   <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
                   <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
+                  <td style={{ padding: '8px', borderRight: '1px solid black' }}>&nbsp;</td>
                   <td style={{ padding: '8px' }}>&nbsp;</td>
                 </tr>
               ))}
@@ -365,7 +347,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             {/* Totals Section */}
             <tr style={{ borderBottom: '1px solid black' }}>
               <td
-                colSpan={5}
+                colSpan={6}
                 style={{ padding: '8px', textAlign: 'right', fontWeight: '600', borderRight: '1px solid black' }}
               >
                 Subtotal:
@@ -376,39 +358,71 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
             </tr>
 
             {/* GST Breakdown */}
-            {taxDetails.isInterstate ? (
+            {Object.entries(taxDetails.taxBreakdown).sort(([a], [b]) => Number(b) - Number(a)).map(([rate, breakdown]) => (
+               <React.Fragment key={rate}>
+                 <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                   <td colSpan={6} style={{ padding: '4px 8px', textAlign: 'right', borderRight: '1px solid black', fontSize: '12px' }}>
+                     Taxable Amount ({rate}%):
+                   </td>
+                   <td style={{ padding: '4px 8px', textAlign: 'right', fontSize: '12px' }}>
+                     ₹{breakdown.taxableAmount.toFixed(2)}
+                   </td>
+                 </tr>
+                 {taxDetails.isInterstate ? (
+                   <tr style={{ borderBottom: '1px solid black' }}>
+                     <td colSpan={6} style={{ padding: '4px 8px', textAlign: 'right', borderRight: '1px solid black', fontSize: '11px', color: '#4b5563' }}>
+                       IGST @ {rate}%:
+                     </td>
+                     <td style={{ padding: '4px 8px', textAlign: 'right', fontSize: '11px', color: '#4b5563' }}>
+                       ₹{breakdown.igst.toFixed(2)}
+                     </td>
+                   </tr>
+                 ) : (
+                   <>
+                     <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                       <td colSpan={6} style={{ padding: '4px 8px', textAlign: 'right', borderRight: '1px solid black', fontSize: '11px', color: '#4b5563' }}>
+                         CGST @ {Number(rate)/2}%:
+                       </td>
+                       <td style={{ padding: '4px 8px', textAlign: 'right', fontSize: '11px', color: '#4b5563' }}>
+                         ₹{breakdown.cgst.toFixed(2)}
+                       </td>
+                     </tr>
+                     <tr style={{ borderBottom: '1px solid black' }}>
+                       <td colSpan={6} style={{ padding: '4px 8px', textAlign: 'right', borderRight: '1px solid black', fontSize: '11px', color: '#4b5563' }}>
+                         SGST @ {Number(rate)/2}%:
+                       </td>
+                       <td style={{ padding: '4px 8px', textAlign: 'right', fontSize: '11px', color: '#4b5563' }}>
+                         ₹{breakdown.sgst.toFixed(2)}
+                       </td>
+                     </tr>
+                   </>
+                 )}
+               </React.Fragment>
+            ))}
+
+            {taxDetails.exemptedAmount > 0 && (
               <tr style={{ borderBottom: '1px solid black' }}>
-                <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
-                  IGST @ {igstPercent}%:
+                <td colSpan={6} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
+                  Exempted Amount (0%):
                 </td>
                 <td style={{ padding: '8px', textAlign: 'right' }}>
-                  ₹{Number(taxDetails.igst).toFixed(2)}
+                  ₹{taxDetails.exemptedAmount.toFixed(2)}
                 </td>
               </tr>
-            ) : (
-              <>
-                <tr style={{ borderBottom: '1px solid black' }}>
-                  <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
-                    CGST @ {cgstPercent}%:
-                  </td>
-                  <td style={{ padding: '8px', textAlign: 'right' }}>
-                    ₹{Number(taxDetails.cgst).toFixed(2)}
-                  </td>
-                </tr>
-                <tr style={{ borderBottom: '1px solid black' }}>
-                  <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
-                    SGST @ {sgstPercent}%:
-                  </td>
-                  <td style={{ padding: '8px', textAlign: 'right' }}>
-                    ₹{Number(taxDetails.sgst).toFixed(2)}
-                  </td>
-                </tr>
-              </>
             )}
+
+            <tr style={{ borderBottom: '1px solid black' }}>
+              <td colSpan={6} style={{ padding: '8px', textAlign: 'right', fontWeight: '600', borderRight: '1px solid black' }}>
+                Total GST:
+              </td>
+              <td style={{ padding: '8px', textAlign: 'right', fontWeight: '600' }}>
+                ₹{taxDetails.totalGST.toFixed(2)}
+              </td>
+            </tr>
 
             {saleOrder.discount_amount > 0 && (
               <tr style={{ borderBottom: '1px solid black' }}>
-                <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
+                <td colSpan={6} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                   Discount ({saleOrder.discount_percentage}%):
                 </td>
                 <td style={{ padding: '8px', textAlign: 'right', color: '#10b981' }}>
@@ -419,7 +433,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
 
             {saleOrder.round_off !== 0 && (
               <tr style={{ borderBottom: '1px solid black' }}>
-                <td colSpan={5} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
+                <td colSpan={6} style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid black' }}>
                   Round Off:
                 </td>
                 <td style={{ padding: '8px', textAlign: 'right' }}>
@@ -430,7 +444,7 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
 
             <tr style={{ borderBottom: '2px solid black', backgroundColor: '#f8f9fa' }}>
               <td
-                colSpan={5}
+                colSpan={6}
                 style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', fontSize: '16px', borderRight: '1px solid black' }}
               >
                 Grand Total:

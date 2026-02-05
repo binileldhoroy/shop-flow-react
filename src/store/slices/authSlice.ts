@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { jwtDecode } from 'jwt-decode';
 import { authService } from '@api/services/auth.service';
-import { User, LoginCredentials, TokenPayload } from '@types/auth.types';
+import { User, LoginCredentials, TokenPayload } from '../../types/auth.types';
 
 interface AuthState {
   user: User | null;
@@ -110,6 +110,7 @@ const authSlice = createSlice({
     },
     updateUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
+      localStorage.setItem('user', JSON.stringify(action.payload));
     },
   },
   extraReducers: (builder) => {

@@ -155,32 +155,58 @@ const POS: React.FC = () => {
 
   const calculateTotals = () => {
     let subtotal = 0;
-    let gstAmount = 0;
+    const taxBreakdown: Record<number, { taxableAmount: number; cgst: number; sgst: number; taxAmount: number }> = {};
+    let totalGst = 0;
+    let exemptedAmount = 0;
 
     cart.items.forEach(item => {
       const quantity = item.quantity;
-      const gstRate = item.gst_rate / 100;
+      const gstRate = item.gst_rate;
+      const rateConfig = gstRate / 100;
+
+      let itemBaseTotal = 0;
+      let itemGstAmount = 0;
 
       if (item.tax_included) {
         const totalWithTax = item.selling_price * quantity;
-        const baseTotal = totalWithTax / (1 + gstRate);
-        const gst = totalWithTax - baseTotal;
-
-        subtotal += baseTotal;
-        gstAmount += gst;
+        itemBaseTotal = totalWithTax / (1 + rateConfig);
+        itemGstAmount = totalWithTax - itemBaseTotal;
       } else {
-        const baseTotal = item.unit_price * quantity;
-        const gst = baseTotal * gstRate;
+        itemBaseTotal = item.unit_price * quantity;
+        itemGstAmount = itemBaseTotal * rateConfig;
+      }
 
-        subtotal += baseTotal;
-        gstAmount += gst;
+      subtotal += itemBaseTotal;
+
+      if (gstRate === 0) {
+        exemptedAmount += itemBaseTotal;
+      } else {
+        if (!taxBreakdown[gstRate]) {
+          taxBreakdown[gstRate] = { taxableAmount: 0, cgst: 0, sgst: 0, taxAmount: 0 };
+        }
+        taxBreakdown[gstRate].taxableAmount += itemBaseTotal;
+        taxBreakdown[gstRate].taxAmount += itemGstAmount;
+        taxBreakdown[gstRate].cgst += itemGstAmount / 2;
+        taxBreakdown[gstRate].sgst += itemGstAmount / 2;
+        totalGst += itemGstAmount;
       }
     });
 
     const discount = (subtotal * cart.discount_percentage) / 100;
-    const total = subtotal + gstAmount - discount;
+    const grossTotal = subtotal + totalGst - discount;
+    const grandTotal = Math.round(grossTotal);
+    const roundOff = grandTotal - grossTotal;
 
-    return { subtotal, gstAmount, discount, total };
+    return {
+      subtotal,
+      taxBreakdown,
+      totalGst,
+      exemptedAmount,
+      discount,
+      grossTotal,
+      roundOff,
+      grandTotal
+    };
   };
 
   const totals = calculateTotals();
@@ -429,65 +455,53 @@ const POS: React.FC = () => {
             )}
           </div>
 
-          {/* Totals */}
           {cart.items.length > 0 && (
             <div className="mt-4 pt-4 border-t space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span>₹{totals.subtotal.toFixed(2)}</span>
-              </div>
-
               {/* GST Breakdown */}
-              {totals.gstAmount > 0 && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span>CGST ({((totals.gstAmount / 2 / totals.subtotal) * 100).toFixed(2)}%):</span>
-                    <span>₹{(totals.gstAmount / 2).toFixed(2)}</span>
+              {Object.entries(totals.taxBreakdown).sort(([a], [b]) => Number(b) - Number(a)).map(([rate, breakdown]) => (
+                <div key={rate} className="space-y-1 py-1 border-t border-dashed border-gray-200">
+                  <div className="flex justify-between text-sm font-medium">
+                    <span>Taxable Amount ({rate}%)</span>
+                    <span>₹{breakdown.taxableAmount.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>SGST ({((totals.gstAmount / 2 / totals.subtotal) * 100).toFixed(2)}%):</span>
-                    <span>₹{(totals.gstAmount / 2).toFixed(2)}</span>
+                  <div className="flex justify-between text-xs text-gray-600 pl-4">
+                    <span>CGST @{Number(rate)/2}%</span>
+                    <span>₹{breakdown.cgst.toFixed(2)}</span>
                   </div>
-                </>
-              )}
+                  <div className="flex justify-between text-xs text-gray-600 pl-4">
+                    <span>SGST @{Number(rate)/2}%</span>
+                    <span>₹{breakdown.sgst.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
 
-              <div className="flex justify-between items-center text-sm">
-                <span>Discount:</span>
-                <input
-                  type="number"
-                  value={cart.discount_percentage}
-                  onChange={(e) => setCart(prev => ({ ...prev, discount_percentage: parseFloat(e.target.value) || 0 }))}
-                  className="w-20 text-right input-field py-1"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                />
-                <span>%</span>
-              </div>
-
-              {totals.discount > 0 && (
-                <div className="flex justify-between text-sm text-success-600">
-                  <span>Discount Amount:</span>
-                  <span>-₹{totals.discount.toFixed(2)}</span>
+              {totals.exemptedAmount > 0 && (
+                <div className="flex justify-between text-sm py-1 border-t border-dashed border-gray-200">
+                  <span>Exempted Amount (0%)</span>
+                  <span>₹{totals.exemptedAmount.toFixed(2)}</span>
                 </div>
               )}
 
-              {(() => {
-                const calculatedTotal = totals.total;
-                const roundedTotal = Math.round(calculatedTotal);
-                const roundOff = roundedTotal - calculatedTotal;
+              <div className="flex justify-between text-sm font-semibold border-t border-gray-300 pt-2">
+                <span>Total GST</span>
+                <span>₹{totals.totalGst.toFixed(2)}</span>
+              </div>
 
-                return roundOff !== 0 ? (
-                  <div className="flex justify-between text-sm">
-                    <span>Round Off:</span>
-                    <span>{roundOff > 0 ? '+' : ''}₹{roundOff.toFixed(2)}</span>
-                  </div>
-                ) : null;
-              })()}
+              <div className="flex justify-between text-sm pt-1">
+                <span>Gross Total</span>
+                <span>₹{totals.grossTotal.toFixed(2)}</span>
+              </div>
 
-              <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                <span>Total:</span>
-                <span>₹{Math.round(totals.total).toFixed(0)}</span>
+              {totals.roundOff !== 0 && (
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Round Off</span>
+                  <span>{totals.roundOff > 0 ? '+' : ''}₹{totals.roundOff.toFixed(2)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-800">
+                <span>Grand Total</span>
+                <span>₹{totals.grandTotal.toFixed(2)}</span>
               </div>
               <button
                 onClick={handleInitiateCheckout}
@@ -504,7 +518,7 @@ const POS: React.FC = () => {
       {/* Payment Modal */}
       {showPaymentModal && (
         <PaymentModal
-          total={totals.total}
+          total={totals.grandTotal}
           onSelectPayment={handlePaymentSelect}
           onClose={() => setShowPaymentModal(false)}
         />

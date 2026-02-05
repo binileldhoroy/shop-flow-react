@@ -19,6 +19,7 @@ interface Sale {
   igst_amount: string;
   gst_amount: string;
   discount_amount: string;
+  round_off: number;
   total_amount: string;
   items: SaleItem[];
 }
@@ -165,21 +166,100 @@ const Sales: React.FC = () => {
               <td colspan="4" class="total">Subtotal</td>
               <td class="total">₹${sale.subtotal}</td>
             </tr>
-            ${parseFloat(sale.igst_amount || '0') > 0 ? `
-              <tr>
-                <td colspan="4" class="total">IGST</td>
-                <td class="total">₹${sale.igst_amount}</td>
-              </tr>
-            ` : `
-              <tr>
-                <td colspan="4" class="total">CGST</td>
-                <td class="total">₹${sale.cgst_amount || '0.00'}</td>
-              </tr>
-              <tr>
-                <td colspan="4" class="total">SGST</td>
-                <td class="total">₹${sale.sgst_amount || '0.00'}</td>
-              </tr>
-            `}
+            ${(() => {
+              const taxBreakdown: Record<number, { taxableAmount: number, cgst: number, sgst: number, igst: number }> = {};
+              let exemptedAmount = 0;
+              let totalGST = 0;
+              const isInterstate = parseFloat(sale.igst_amount || '0') > 0;
+
+              sale.items.forEach(item => {
+                 // Calculate taxable from unit price and quantity assuming unit_price is tax exclusive base
+                 const qty = parseFloat(item.quantity) || 0;
+                 const price = parseFloat(item.unit_price) || 0;
+                 // Assuming unit_price is tax excluded based on POS logic refactor.
+                 // However, legacy data might be mixed.
+                 // Best approach: If we have separate tax amounts in item, use them?
+                 // The SaleItem interface has 'total_with_gst'.
+                 // Let's reverse calculate taxable if needed or use unit_price * quantity as taxable base.
+                 const taxable = price * qty;
+                 const rate = parseFloat(item.gst_rate) || 0;
+
+                 if (rate === 0) {
+                   exemptedAmount += taxable;
+                 } else {
+                   if (!taxBreakdown[rate]) taxBreakdown[rate] = { taxableAmount: 0, cgst: 0, sgst: 0, igst: 0 };
+                   taxBreakdown[rate].taxableAmount += taxable;
+
+                   const taxAmt = (taxable * rate) / 100;
+                   totalGST += taxAmt;
+
+                   if (isInterstate) {
+                     taxBreakdown[rate].igst += taxAmt;
+                   } else {
+                     taxBreakdown[rate].cgst += taxAmt / 2;
+                     taxBreakdown[rate].sgst += taxAmt / 2;
+                   }
+                 }
+              });
+
+              let html = '';
+
+              // GST Breakdown Rows
+              Object.entries(taxBreakdown).sort(([a], [b]) => Number(b) - Number(a)).forEach(([rate, breakdown]) => {
+                 html += `
+                   <tr>
+                     <td colspan="4" class="total" style="text-align: right;font-weight:normal;font-size:12px">Taxable Amount (${rate}%)</td>
+                     <td class="total" style="text-align: right;font-weight:normal;font-size:12px">₹${breakdown.taxableAmount.toFixed(2)}</td>
+                   </tr>
+                 `;
+                 if (isInterstate) {
+                   html += `
+                     <tr>
+                       <td colspan="4" class="total" style="text-align: right;font-size:12px;color:#666">IGST @ ${rate}%</td>
+                       <td class="total" style="text-align: right;font-size:12px;color:#666">₹${breakdown.igst.toFixed(2)}</td>
+                     </tr>
+                   `;
+                 } else {
+                    html += `
+                     <tr>
+                       <td colspan="4" class="total" style="text-align: right;font-size:12px;color:#666">CGST @ ${Number(rate)/2}%</td>
+                       <td class="total" style="text-align: right;font-size:12px;color:#666">₹${breakdown.cgst.toFixed(2)}</td>
+                     </tr>
+                     <tr>
+                       <td colspan="4" class="total" style="text-align: right;font-size:12px;color:#666">SGST @ ${Number(rate)/2}%</td>
+                       <td class="total" style="text-align: right;font-size:12px;color:#666">₹${breakdown.sgst.toFixed(2)}</td>
+                     </tr>
+                    `;
+                 }
+              });
+
+              if (exemptedAmount > 0) {
+                 html += `
+                   <tr>
+                     <td colspan="4" class="total" style="text-align: right;font-weight:normal;font-size:12px">Exempted Amount (0%)</td>
+                     <td class="total" style="text-align: right;font-weight:normal;font-size:12px">₹${exemptedAmount.toFixed(2)}</td>
+                   </tr>
+                 `;
+              }
+
+              html += `
+                <tr>
+                  <td colspan="4" class="total" style="text-align: right;">Total GST</td>
+                  <td class="total">₹${totalGST.toFixed(2)}</td>
+                </tr>
+              `;
+
+              if (sale.round_off && Number(sale.round_off) !== 0) {
+                 html += `
+                   <tr>
+                     <td colspan="4" class="total" style="text-align: right;font-weight:normal;">Round Off</td>
+                     <td class="total" style="text-align: right;font-weight:normal;">${Number(sale.round_off) > 0 ? '+' : ''}₹{Number(sale.round_off).toFixed(2)}</td>
+                   </tr>
+                 `;
+              }
+
+              return html;
+            })()}
             <tr>
               <td colspan="4" class="total">Total</td>
               <td class="total">₹${sale.total_amount}</td>
@@ -545,23 +625,78 @@ const Sales: React.FC = () => {
                     <span className="font-medium text-gray-900">₹{selectedSale.subtotal}</span>
                   </div>
 
-                  {parseFloat(selectedSale.igst_amount || '0') > 0 ? (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">IGST</span>
-                      <span className="font-medium text-gray-900">₹{selectedSale.igst_amount}</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">CGST</span>
-                        <span className="font-medium text-gray-900">₹{selectedSale.cgst_amount || '0.00'}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">SGST</span>
-                        <span className="font-medium text-gray-900">₹{selectedSale.sgst_amount || '0.00'}</span>
-                      </div>
-                    </>
-                  )}
+                  {/* GST Breakdown */}
+                  {(() => {
+                     const isInterstate = parseFloat(selectedSale.igst_amount || '0') > 0;
+                     const taxBreakdown: Record<number, { taxableAmount: number, cgst: number, sgst: number, igst: number }> = {};
+                     let exemptedAmount = 0;
+                     let totalGST = 0;
+
+                     selectedSale.items.forEach(item => {
+                       const qty = parseFloat(item.quantity) || 0;
+                       const price = parseFloat(item.unit_price) || 0;
+                       const taxable = qty * price;
+                       const rate = parseFloat(item.gst_rate) || 0;
+
+                       if (rate === 0) {
+                         exemptedAmount += taxable;
+                       } else {
+                         if (!taxBreakdown[rate]) taxBreakdown[rate] = { taxableAmount: 0, cgst: 0, sgst: 0, igst: 0 };
+                         taxBreakdown[rate].taxableAmount += taxable;
+                         const taxAmt = (taxable * rate) / 100;
+                         totalGST += taxAmt;
+
+                         if (isInterstate) {
+                           taxBreakdown[rate].igst += taxAmt;
+                         } else {
+                           taxBreakdown[rate].cgst += taxAmt / 2;
+                           taxBreakdown[rate].sgst += taxAmt / 2;
+                         }
+                       }
+                     });
+
+                     return (
+                       <>
+                         {Object.entries(taxBreakdown).sort(([a], [b]) => Number(b) - Number(a)).map(([rate, breakdown]) => (
+                           <React.Fragment key={rate}>
+                             <div className="flex justify-between text-sm pt-1 border-t border-dashed border-gray-100">
+                               <span className="text-gray-900 font-medium">Taxable Amount ({rate}%)</span>
+                               <span className="text-gray-900 font-medium">₹{breakdown.taxableAmount.toFixed(2)}</span>
+                             </div>
+                             {isInterstate ? (
+                               <div className="flex justify-between text-xs text-gray-500 pl-2">
+                                 <span>IGST @ {rate}%</span>
+                                 <span>₹{breakdown.igst.toFixed(2)}</span>
+                               </div>
+                             ) : (
+                               <>
+                                 <div className="flex justify-between text-xs text-gray-500 pl-2">
+                                   <span>CGST @ {Number(rate)/2}%</span>
+                                   <span>₹{breakdown.cgst.toFixed(2)}</span>
+                                 </div>
+                                 <div className="flex justify-between text-xs text-gray-500 pl-2">
+                                   <span>SGST @ {Number(rate)/2}%</span>
+                                   <span>₹{breakdown.sgst.toFixed(2)}</span>
+                                 </div>
+                               </>
+                             )}
+                           </React.Fragment>
+                         ))}
+
+                         {exemptedAmount > 0 && (
+                            <div className="flex justify-between text-sm pt-1 border-t border-dashed border-gray-100">
+                               <span className="text-gray-600">Exempted Amount (0%)</span>
+                               <span className="text-gray-900">₹{exemptedAmount.toFixed(2)}</span>
+                            </div>
+                         )}
+
+                         <div className="flex justify-between text-sm font-semibold pt-2 border-t border-gray-100">
+                           <span className="text-gray-900">Total GST</span>
+                           <span className="text-gray-900">₹{totalGST.toFixed(2)}</span>
+                         </div>
+                       </>
+                     );
+                  })()}
 
                   {parseFloat(selectedSale.discount_amount) > 0 && (
                     <div className="flex justify-between text-sm">
@@ -569,6 +704,16 @@ const Sales: React.FC = () => {
                       <span className="font-medium text-danger-600">-₹{selectedSale.discount_amount}</span>
                     </div>
                   )}
+
+                  {selectedSale.round_off && Number(selectedSale.round_off) !== 0 && (
+                     <div className="flex justify-between text-sm">
+                       <span className="text-gray-600">Round Off</span>
+                       <span className="font-medium text-gray-900">
+                         {Number(selectedSale.round_off) > 0 ? '+' : ''}₹{Number(selectedSale.round_off).toFixed(2)}
+                       </span>
+                     </div>
+                  )}
+
                   <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
                     <span className="text-gray-900">Total</span>
                     <span className="text-gray-900">₹{selectedSale.total_amount}</span>

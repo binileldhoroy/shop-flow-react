@@ -98,32 +98,93 @@ console.log(sale);
             </table>
           </div>
 
-          {/* Totals */}
+
           <div className="border-t-2 border-dashed border-gray-400 pt-2 space-y-1 text-xs">
             <div className="flex justify-between">
               <span>Subtotal:</span>
               <span>₹{parseFloat(sale.subtotal || 0).toFixed(2)}</span>
             </div>
 
-            {sale.cgst_amount > 0 && (
-              <>
-                <div className="flex justify-between">
-                  <span>CGST:</span>
-                  <span>₹{parseFloat(sale.cgst_amount).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>SGST:</span>
-                  <span>₹{parseFloat(sale.sgst_amount).toFixed(2)}</span>
-                </div>
-              </>
-            )}
+            {(() => {
+              // Calculate Invoice Breakdown on the fly for preview
+              const taxBreakdown: Record<number, { taxableAmount: number; cgst: number; sgst: number; igst: number }> = {};
+              let exemptedAmount = 0;
+              let totalGST = 0;
 
-            {sale.igst_amount > 0 && (
-              <div className="flex justify-between">
-                <span>IGST:</span>
-                <span>₹{parseFloat(sale.igst_amount).toFixed(2)}</span>
-              </div>
-            )}
+              // Helper to check if interstate (simple heuristic or data based)
+              // Assuming intra-state for receipt unless explicit data available,
+              // or deriving from existing fields.
+              // Existing code used sale.igst_amount > 0 to detect.
+              const isInterstate = Number(sale.igst_amount) > 0;
+
+              if (sale.items) {
+                sale.items.forEach((item: any) => {
+                   const qty = Number(item.quantity) || 0;
+                   const unitPrice = Number(item.unit_price) || 0;
+                   const lineTotal = qty * unitPrice; // Taxable Value
+                   const rate = Number(item.gst_rate) || 0;
+
+                   if (rate === 0) {
+                     exemptedAmount += lineTotal;
+                   } else {
+                     if (!taxBreakdown[rate]) taxBreakdown[rate] = { taxableAmount: 0, cgst: 0, sgst: 0, igst: 0 };
+
+                     const taxAmt = (lineTotal * rate) / 100;
+                     taxBreakdown[rate].taxableAmount += lineTotal;
+
+                     if (isInterstate) {
+                        taxBreakdown[rate].igst += taxAmt;
+                     } else {
+                        taxBreakdown[rate].cgst += taxAmt / 2;
+                        taxBreakdown[rate].sgst += taxAmt / 2;
+                     }
+                     totalGST += taxAmt;
+                   }
+                });
+              }
+
+              return (
+                <>
+                  {Object.entries(taxBreakdown).sort(([a], [b]) => Number(b) - Number(a)).map(([rate, breakdown]) => (
+                    <div key={rate} className="border-t border-dashed border-gray-300 py-1">
+                      <div className="flex justify-between font-medium">
+                        <span>Taxable ({rate}%)</span>
+                        <span>₹{breakdown.taxableAmount.toFixed(2)}</span>
+                      </div>
+                      {isInterstate ? (
+                        <div className="flex justify-between text-[10px] pl-2 text-gray-600">
+                           <span>IGST @{rate}%</span>
+                           <span>₹{breakdown.igst.toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between text-[10px] pl-2 text-gray-600">
+                             <span>CGST @{Number(rate)/2}%</span>
+                             <span>₹{breakdown.cgst.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px] pl-2 text-gray-600">
+                             <span>SGST @{Number(rate)/2}%</span>
+                             <span>₹{breakdown.sgst.toFixed(2)}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+
+                  {exemptedAmount > 0 && (
+                    <div className="flex justify-between border-t border-dashed border-gray-300 py-1">
+                      <span>Exempted (0%)</span>
+                      <span>₹{exemptedAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between font-semibold border-t border-gray-400 pt-1">
+                    <span>Total GST:</span>
+                    <span>₹{totalGST.toFixed(2)}</span>
+                  </div>
+                </>
+              );
+            })()}
 
             {sale.discount_amount > 0 && (
               <div className="flex justify-between text-green-600">
