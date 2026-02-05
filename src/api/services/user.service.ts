@@ -1,11 +1,12 @@
 import axiosInstance from '../axios';
 import { API_ENDPOINTS } from '../endpoints';
-import { User } from '@types/auth.types';
+import { User } from '../../types/auth.types';
 
 export interface UserCreateData {
   username: string;
   email: string;
   password: string;
+  password_confirm: string;
   first_name: string;
   last_name: string;
   role: string;
