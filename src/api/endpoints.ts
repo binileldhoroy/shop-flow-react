@@ -29,6 +29,10 @@ export const API_ENDPOINTS = {
     CATEGORY_DETAIL: (id: number) => `/api/products/categories/${id}/`,
     LIST: '/api/products/',
     DETAIL: (id: number) => `/api/products/${id}/`,
+    PRICE_TIERS: '/api/products/price-tiers/',
+    PRICE_TIER_DETAIL: (id: number) => `/api/products/price-tiers/${id}/`,
+    TIER_PRICES: '/api/products/tier-prices/',
+    TIER_PRICE_DETAIL: (id: number) => `/api/products/tier-prices/${id}/`,
   },
 
   // Categories (alias for convenience)

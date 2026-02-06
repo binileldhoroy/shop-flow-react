@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../common/Modal/Modal';
 import { Product, Category, ProductFormData } from '../../../types/product.types';
+import ProductPriceTiers from './ProductPriceTiers';
+import { Tag } from 'lucide-react';
 
 interface ProductFormModalProps {
   show: boolean;
@@ -340,6 +342,23 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
           <label htmlFor="is_active" className="text-sm text-gray-700">
             Active
           </label>
+        </div>
+
+        {/* Price Tiers Section (Only shown for existing products) */}
+        {/* Price Tiers Section */}
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-4">
+             <h3 className="font-semibold text-gray-800 flex items-center gap-2 mb-2">
+                 <Tag className="w-4 h-4" />
+                 Price Tier Customization
+             </h3>
+
+             {product && product.id ? (
+                 <ProductPriceTiers productId={product.id} />
+             ) : (
+                 <p className="text-sm text-gray-500 italic">
+                     Please save the product first to configure specific price tier rules.
+                 </p>
+             )}
         </div>
       </form>
     </Modal>

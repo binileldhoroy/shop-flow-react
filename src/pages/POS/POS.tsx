@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '@hooks/useRedux';
 import { productService } from '@api/services/product.service';
 import { customerService } from '@api/services/customer.service';
 import { saleService } from '@api/services/sale.service';
+import { priceTierService, PriceTier, ProductTierPrice } from '@api/services/priceTier.service';
 import { addNotification } from '@store/slices/uiSlice';
-import { Search, Plus, Minus, Trash2, ShoppingCart, User, Package } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, User, Package, Tag } from 'lucide-react';
 import PaymentModal from '../../components/pos/PaymentModal';
 import InvoicePreview from '../../components/pos/InvoicePreview';
 
@@ -34,6 +35,10 @@ const POS: React.FC = () => {
   const [productSearch, setProductSearch] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
+  const [productRules, setProductRules] = useState<ProductTierPrice[]>([]);
+  const [selectedTierId, setSelectedTierId] = useState<number | null>(null);
+
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -49,51 +54,105 @@ const POS: React.FC = () => {
     discount_percentage: 0,
   });
 
-  // Fetch products
-  React.useEffect(() => {
-    const fetchProducts = async () => {
+  // Fetch initial data
+  useEffect(() => {
+    const fetchInitialData = async () => {
       try {
-        const response = await productService.getAll();
-        const data = response.results || response;
-        setProducts(data.filter((p: any) => p.stock_quantity > 0));
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
-    fetchProducts();
-  }, []);
+        const [productsData, customersData, tiersData, rulesData] = await Promise.all([
+          productService.getAll(),
+          customerService.getAll(),
+          priceTierService.getAllTiers(),
+          priceTierService.getProductRules()
+        ]);
 
-  // Fetch customers
-  React.useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const data = await customerService.getAll();
-        setCustomers(data);
+        const pData = productsData.results || productsData;
+        setProducts(pData.filter((p: any) => p.stock_quantity > 0));
+        setCustomers(customersData);
+        setPriceTiers(tiersData.filter((t: PriceTier) => t.is_active));
+        setProductRules(rulesData);
       } catch (error) {
-        console.error('Error fetching customers:', error);
+        console.error('Error fetching data:', error);
+        dispatch(addNotification({ message: 'Failed to load POS data', type: 'error' }));
       }
     };
-    fetchCustomers();
-  }, []);
+    fetchInitialData();
+  }, [dispatch]);
+
+  const calculateEffectivePrice = (product: any) => {
+    const baseSellingPrice = parseFloat(product.selling_price);
+    if (!selectedTierId) return baseSellingPrice;
+
+    // 1. Check for specific product rule
+    const rule = productRules.find(r => r.product === product.id && r.tier === selectedTierId);
+    if (rule) {
+      if (rule.type === 'fixed') {
+        return parseFloat(rule.value as any);
+      } else {
+        // Percentage adjustments
+        const percentage = parseFloat(rule.value as any);
+        return baseSellingPrice + (baseSellingPrice * (percentage / 100));
+      }
+    }
+
+    // 2. Check for tier default percentage
+    const tier = priceTiers.find(t => t.id === selectedTierId);
+    if (tier && tier.default_percentage) {
+      const percentage = parseFloat(tier.default_percentage as any);
+      return baseSellingPrice + (baseSellingPrice * (percentage / 100));
+    }
+
+    // 3. Fallback to base price
+    return baseSellingPrice;
+  };
+
+  // Recalculate cart when tier changes
+  useEffect(() => {
+    if (cart.items.length === 0) return;
+
+    setCart(prev => ({
+      ...prev,
+      items: prev.items.map(item => {
+        const product = products.find(p => p.id === item.product_id);
+        if (!product) return item;
+
+        const newSellingPrice = calculateEffectivePrice(product);
+
+        // Improve tax logic: if tax included, unit_price needs recalc too?
+        // Usually unit_price means base price (excl tax) in this codebase context?
+        // Looking at handleAddToCart below:
+        // const basePrice = product.tax_included ? ... : ...
+        // We need to keep unit_price and selling_price consistent.
+
+        const newBasePrice = product.tax_included
+           ? newSellingPrice / (1 + parseFloat(product.gst_rate) / 100)
+           : newSellingPrice;
+
+        return {
+          ...item,
+          selling_price: newSellingPrice,
+          unit_price: newBasePrice
+        };
+      })
+    }));
+  }, [selectedTierId, products, productRules]); // Dependent on these changes
 
   const selectedCustomer = customers.find((c: any) => c.id === cart.customer_id);
 
   const handleAddToCart = (product: any) => {
-    // Check if product has stock
     if (!product.stock_quantity || product.stock_quantity <= 0) {
       dispatch(addNotification({ message: 'Product is out of stock', type: 'error' }));
       return;
     }
 
+    const effectivePrice = calculateEffectivePrice(product);
+
     // Check if already in cart
     const existingItem = cart.items.find(item => item.product_id === product.id);
     if (existingItem) {
-      // Check if we can add more
       if (existingItem.quantity >= product.stock_quantity) {
         dispatch(addNotification({ message: `Only ${product.stock_quantity} units available`, type: 'error' }));
         return;
       }
-      // Update quantity
       setCart(prev => ({
         ...prev,
         items: prev.items.map(item =>
@@ -103,10 +162,9 @@ const POS: React.FC = () => {
         ),
       }));
     } else {
-      // Add new item
       const basePrice = product.tax_included
-        ? parseFloat(product.base_price)
-        : parseFloat(product.selling_price);
+        ? effectivePrice / (1 + parseFloat(product.gst_rate) / 100)
+        : effectivePrice;
 
       const newItem: CartItem = {
         id: Date.now(),
@@ -114,7 +172,7 @@ const POS: React.FC = () => {
         name: product.name,
         sku: product.sku,
         unit_price: basePrice,
-        selling_price: parseFloat(product.selling_price),
+        selling_price: effectivePrice,
         quantity: 1,
         gst_rate: parseFloat(product.gst_rate),
         hsn_code: product.hsn_code,
@@ -222,14 +280,6 @@ const POS: React.FC = () => {
       return;
     }
 
-    // Validate stock before checkout
-    for (const item of cart.items) {
-      if (item.stock_quantity && item.quantity > item.stock_quantity) {
-        dispatch(addNotification({ message: `${item.name}: Only ${item.stock_quantity} units available`, type: 'error' }));
-        return;
-      }
-    }
-
     setShowPaymentModal(true);
   };
 
@@ -240,7 +290,6 @@ const POS: React.FC = () => {
     try {
       let customerId = cart.customer_id;
 
-      // Create guest customer if needed
       if (!customerId && guestName) {
         const guest = await customerService.create({
           name: guestName,
@@ -296,7 +345,27 @@ const POS: React.FC = () => {
       {/* Left Panel - Products */}
       <div className="flex-1 space-y-4">
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4">Products</h2>
+          <div className="flex justify-between items-center mb-4">
+             <h2 className="text-lg font-semibold">Products</h2>
+
+             {/* Tier Selection */}
+             <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-gray-500" />
+                <select
+                  value={selectedTierId || ''}
+                  onChange={(e) => setSelectedTierId(e.target.value ? Number(e.target.value) : null)}
+                  className="input-field py-1 px-3 text-sm w-48"
+                >
+                  <option value="">Standard Price</option>
+                  {priceTiers.map(tier => (
+                    <option key={tier.id} value={tier.id}>
+                      {tier.name} ({tier.default_percentage > 0 ? '+' : ''}{tier.default_percentage}%)
+                    </option>
+                  ))}
+                </select>
+             </div>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -310,7 +379,12 @@ const POS: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.slice(0, 12).map((product: any) => (
+          {filteredProducts.slice(0, 12).map((product: any) => {
+             const effectivePrice = calculateEffectivePrice(product);
+             const isDiscounted = effectivePrice < parseFloat(product.selling_price);
+             const isPremium = effectivePrice > parseFloat(product.selling_price);
+
+             return (
             <button
               key={product.id}
               onClick={() => handleAddToCart(product)}
@@ -318,24 +392,30 @@ const POS: React.FC = () => {
             >
               <div className="font-medium text-gray-900">{product.name}</div>
               <div className="text-sm text-gray-500 mt-1">{product.sku}</div>
-              <div className="text-lg font-bold text-primary-600 mt-2">
-                ₹{product.selling_price}
+              <div className="mt-2 flex items-baseline gap-2">
+                 <div className={`text-lg font-bold ${isDiscounted ? 'text-success-600' : isPremium ? 'text-warning-600' : 'text-primary-600'}`}>
+                   ₹{effectivePrice.toFixed(2)}
+                 </div>
+                 {effectivePrice !== parseFloat(product.selling_price) && (
+                   <div className="text-xs text-gray-400 line-through">
+                      ₹{product.selling_price}
+                   </div>
+                 )}
               </div>
               <div className="text-xs text-gray-500">GST: {product.gst_rate}%</div>
               <div className="text-xs font-medium text-success-600 mt-1">
                 Stock: {product.stock_quantity} {product.unit}
               </div>
             </button>
-          ))}
+          )})}
         </div>
 
         {filteredProducts.length === 0 && (
-          <div className="card text-center py-8 text-gray-500">
-            <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>No products with stock available</p>
-            <p className="text-sm mt-1">Add stock to products in Inventory page</p>
-          </div>
-        )}
+           <div className="card text-center py-8 text-gray-500">
+             <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+             <p>No products found or out of stock</p>
+           </div>
+         )}
       </div>
 
       {/* Right Panel - Cart */}
@@ -418,7 +498,7 @@ const POS: React.FC = () => {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <div className="font-medium text-sm">{item.name}</div>
-                      <div className="text-xs text-gray-500">₹{item.unit_price} × {item.quantity}</div>
+                      <div className="text-xs text-gray-500">₹{item.unit_price.toFixed(2)} × {item.quantity}</div>
                       {item.stock_quantity && (
                         <div className="text-xs text-success-600 mt-1">
                           Stock: {item.stock_quantity} available
@@ -447,7 +527,7 @@ const POS: React.FC = () => {
                       <Plus className="w-4 h-4" />
                     </button>
                     <div className="ml-auto font-medium">
-                      ₹{(item.unit_price * item.quantity).toFixed(2)}
+                      ₹{(item.selling_price * item.quantity).toFixed(2)}
                     </div>
                   </div>
                 </div>

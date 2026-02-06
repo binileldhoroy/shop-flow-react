@@ -3,8 +3,10 @@ import { useAppDispatch } from '@hooks/useRedux';
 import { useDebounce } from '@hooks/useDebounce';
 import { productService } from '@api/services/product.service';
 import { saleService } from '@api/services/sale.service';
+import { customerService } from '@api/services/customer.service';
+import { priceTierService, PriceTier, ProductTierPrice } from '@api/services/priceTier.service';
 import { addNotification } from '@store/slices/uiSlice';
-import { Search, ShoppingCart, Trash2, CreditCard, Banknote, User, Package, Plus, Minus, Receipt, Smartphone, Building2 } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, CreditCard, Banknote, User, Package, Plus, Minus, Receipt, Smartphone, Building2, Tag } from 'lucide-react';
 import InvoicePreview from '../../components/pos/InvoicePreview';
 
 interface CartItem {
@@ -19,6 +21,7 @@ interface CartItem {
   hsn_code: string;
   tax_included: boolean;
   stock_quantity?: number;
+  original_selling_price: number;
 }
 
 interface CartState {
@@ -36,7 +39,9 @@ const QuickSale: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [products, setProducts] = useState<any[]>([]);
-  // const [filteredProducts, setFilteredProducts] = useState<any[]>([]); // No longer needed, products will be the filtered list
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
+  const [productRules, setProductRules] = useState<ProductTierPrice[]>([]);
+  const [selectedTierId, setSelectedTierId] = useState<number | null>(null);
 
   const [cart, setCart] = useState<CartState>({
     items: [],
@@ -49,6 +54,23 @@ const QuickSale: React.FC = () => {
   const [completedSale, setCompletedSale] = useState<any>(null);
   const [showInvoice, setShowInvoice] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch Tiers & Rules on Mount
+  useEffect(() => {
+    const fetchPricingData = async () => {
+        try {
+            const [tiersData, rulesData] = await Promise.all([
+                priceTierService.getAllTiers(),
+                priceTierService.getProductRules()
+            ]);
+            setPriceTiers(tiersData.filter((t: PriceTier) => t.is_active));
+            setProductRules(rulesData);
+        } catch (error) {
+            console.error('Error fetching pricing data:', error);
+        }
+    };
+    fetchPricingData();
+  }, []);
 
   // Server-side search effect
   useEffect(() => {
@@ -82,27 +104,104 @@ const QuickSale: React.FC = () => {
     }
   }, []);
 
+  // Price Calculation Logic
+  const calculateEffectivePrice = (product: any) => {
+    const baseSellingPrice = parseFloat(product.selling_price);
+    if (!selectedTierId) return baseSellingPrice;
+
+    // 1. Check for specific product rule
+    const rule = productRules.find(r => r.product === product.id && r.tier === selectedTierId);
+    if (rule) {
+      if (rule.type === 'fixed') {
+        return parseFloat(rule.value as any);
+      } else {
+        // Percentage adjustments
+        const percentage = parseFloat(rule.value as any);
+        return baseSellingPrice + (baseSellingPrice * (percentage / 100));
+      }
+    }
+
+    // 2. Check for tier default percentage
+    const tier = priceTiers.find(t => t.id === selectedTierId);
+    if (tier && tier.default_percentage) {
+      const percentage = parseFloat(tier.default_percentage as any);
+      return baseSellingPrice + (baseSellingPrice * (percentage / 100));
+    }
+
+    // 3. Fallback to base price
+    return baseSellingPrice;
+  };
+
+  // Recalculate cart when tier changes
+  useEffect(() => {
+    if (cart.items.length === 0) return;
+
+    setCart(prev => ({
+      ...prev,
+      items: prev.items.map(item => {
+        // Use stored original price as base
+        const baseSellingPrice = item.original_selling_price;
+
+        let newSellingPrice = baseSellingPrice;
+
+        if (selectedTierId) {
+            // 1. Check for specific product rule
+            const rule = productRules.find(r => r.product === item.product_id && r.tier === selectedTierId);
+            if (rule) {
+              if (rule.type === 'fixed') {
+                newSellingPrice = parseFloat(rule.value as any);
+              } else {
+                // Percentage adjustments
+                const percentage = parseFloat(rule.value as any);
+                newSellingPrice = baseSellingPrice + (baseSellingPrice * (percentage / 100));
+              }
+            } else {
+                // 2. Check for tier default percentage
+                const tier = priceTiers.find(t => t.id === selectedTierId);
+                if (tier && tier.default_percentage) {
+                  const percentage = parseFloat(tier.default_percentage as any);
+                  newSellingPrice = baseSellingPrice + (baseSellingPrice * (percentage / 100));
+                }
+            }
+        }
+
+        // Recalculate unit price (base price before tax) if tax is included
+        const newUnitPrice = item.tax_included
+           ? newSellingPrice / (1 + item.gst_rate / 100)
+           : newSellingPrice;
+
+        return {
+          ...item,
+          selling_price: newSellingPrice,
+          unit_price: newUnitPrice
+        };
+      })
+    }));
+  }, [selectedTierId, productRules, priceTiers]);
+
 
   const handleAddToCart = (product: any) => {
     const existingItem = cart.items.find(item => item.product_id === product.id);
+    const effectivePrice = calculateEffectivePrice(product);
 
     if (existingItem) {
       if (existingItem.quantity >= product.stock_quantity) {
         dispatch(addNotification({ message: `Only ${product.stock_quantity} available`, type: 'error' }));
         return;
       }
-      setCart(prev => ({
+      // Update price if tier changed (handled by effect usually, but here immediate)
+       setCart(prev => ({
         ...prev,
         items: prev.items.map(item =>
           item.product_id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: item.quantity + 1, selling_price: effectivePrice }
           : item
         )
       }));
     } else {
       const basePrice = product.tax_included
-        ? parseFloat(product.base_price)
-        : parseFloat(product.selling_price);
+        ? effectivePrice / (1 + parseFloat(product.gst_rate) / 100)
+        : effectivePrice;
 
       const newItem: CartItem = {
         id: Date.now(),
@@ -110,12 +209,13 @@ const QuickSale: React.FC = () => {
         name: product.name,
         sku: product.sku,
         unit_price: basePrice,
-        selling_price: parseFloat(product.selling_price),
+        selling_price: effectivePrice,
         quantity: 1,
         gst_rate: parseFloat(product.gst_rate),
         hsn_code: product.hsn_code,
         tax_included: product.tax_included,
         stock_quantity: product.stock_quantity,
+        original_selling_price: parseFloat(product.selling_price),
       };
       setCart(prev => ({ ...prev, items: [...prev.items, newItem] }));
     }
@@ -327,7 +427,12 @@ const QuickSale: React.FC = () => {
           </div>
 
           <div className="overflow-y-auto flex-1 p-2 space-y-2">
-            {products.map(product => (
+            {products.map(product => {
+               const effectivePrice = calculateEffectivePrice(product);
+               const isDiscounted = effectivePrice < parseFloat(product.selling_price);
+               const isPremium = effectivePrice > parseFloat(product.selling_price);
+
+               return (
               <button
                 key={product.id}
                 onClick={() => handleAddToCart(product)}
@@ -338,18 +443,18 @@ const QuickSale: React.FC = () => {
                   <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
                     <span className="bg-gray-100 px-2 py-0.5 rounded">SKU: {product.sku}</span>
                     {product.barcode && <span>{product.barcode}</span>}
-                    {/* Placeholder for Batch if it existed */}
-                    {/* <span className="text-blue-600">Batch: A101</span> */}
                   </div>
                 </div>
                 <div className="text-right">
-                   <div className="font-bold text-xl text-primary-600">₹{parseFloat(product.selling_price).toFixed(2)}</div>
+                   <div className={`font-bold text-xl ${isDiscounted ? 'text-success-600' : isPremium ? 'text-warning-600' : 'text-primary-600'}`}>
+                       ₹{effectivePrice.toFixed(2)}
+                   </div>
                    <div className="text-sm font-medium text-success-600">
                      {product.stock_quantity} available
                    </div>
                 </div>
               </button>
-            ))}
+            )})}
             {products.length === 0 && searchTerm && !isLoading && (
               <div className="text-center py-12 text-gray-400">
                 No products found
@@ -367,8 +472,8 @@ const QuickSale: React.FC = () => {
       {/* Right Panel: Receipt / Cart */}
       <div className="w-[450px] bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col h-full">
         {/* Header */}
-        <div className="p-4 border-b border-gray-100 bg-gray-50 rounded-t-xl">
-           <div className="flex justify-between items-center mb-4">
+        <div className="p-4 border-b border-gray-100 bg-gray-50 rounded-t-xl space-y-3">
+           <div className="flex justify-between items-center">
               <h2 className="font-bold text-lg flex items-center gap-2">
                 <Receipt className="w-5 h-5" />
                 Current Sale
@@ -376,6 +481,25 @@ const QuickSale: React.FC = () => {
               <div className="text-sm bg-primary-100 text-primary-700 px-3 py-1 rounded-full font-medium">
                  {cart.items.reduce((acc, i) => acc + i.quantity, 0)} Items
               </div>
+           </div>
+
+           {/* Tier Selection */}
+           <div className="relative">
+             <div className="flex items-center gap-2 bg-white border rounded-lg p-2">
+                <Tag className="w-4 h-4 text-gray-500" />
+                <select
+                  value={selectedTierId || ''}
+                  onChange={(e) => setSelectedTierId(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full text-sm outline-none"
+                >
+                  <option value="">Standard Price</option>
+                  {priceTiers.map(tier => (
+                    <option key={tier.id} value={tier.id}>
+                      {tier.name} ({tier.default_percentage > 0 ? '+' : ''}{tier.default_percentage}%)
+                    </option>
+                  ))}
+                </select>
+             </div>
            </div>
 
            {/* Customer Selector (Simplified) */}
@@ -388,9 +512,7 @@ const QuickSale: React.FC = () => {
                    <User className="w-4 h-4"/>
                    {selectedCustomer ? selectedCustomer.name : 'Walk-in Customer'}
                 </span>
-                {/* Maybe a clear button or default logic */}
              </button>
-             {/* Note: Full customer search can be added here, keeping it simple for "Quick Sale" */}
            </div>
         </div>
 
@@ -405,7 +527,7 @@ const QuickSale: React.FC = () => {
                  </div>
                </div>
                <div className="flex flex-col items-end gap-1">
-                 <div className="font-bold">₹{(item.unit_price * item.quantity).toFixed(2)}</div>
+                 <div className="font-bold">₹{(item.selling_price * item.quantity).toFixed(2)}</div>
                  <div className="flex items-center gap-1 bg-gray-100 rounded p-0.5">
                    <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-white rounded"><Minus className="w-3 h-3"/></button>
                    <button onClick={() => updateQuantity(item.id, 1)} className="p-1 hover:bg-white rounded"><Plus className="w-3 h-3"/></button>

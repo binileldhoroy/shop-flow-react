@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { User, Building2 } from 'lucide-react';
+import { User, Building2, Tag } from 'lucide-react';
 import ProfileSettings from '../../components/features/settings/ProfileSettings';
 import CompanySettings from '../../components/features/settings/CompanySettings';
+import PriceTiersSettings from '../../components/features/settings/PriceTiersSettings';
 
 const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'company'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'company' | 'tiers'>('profile');
 
   return (
     <div className="h-full flex flex-col">
@@ -40,11 +41,24 @@ const Settings: React.FC = () => {
               <Building2 className="w-4 h-4" />
               Company
             </button>
+            <button
+              onClick={() => setActiveTab('tiers')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'tiers'
+                  ? 'bg-primary-50 text-primary-700 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              Price Tiers
+            </button>
           </div>
 
           {/* Content */}
           <div className="min-h-[400px]">
-            {activeTab === 'profile' ? <ProfileSettings /> : <CompanySettings />}
+            {activeTab === 'profile' && <ProfileSettings />}
+            {activeTab === 'company' && <CompanySettings />}
+            {activeTab === 'tiers' && <PriceTiersSettings />}
           </div>
         </div>
       </div>
